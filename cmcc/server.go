@@ -1,8 +1,13 @@
 package main
 
+// export CMCC_CONF_PATH="/Users/huangzhonghui/.cmcc.yaml"
+// export GNET_LOGGING_LEVEL=-1
+// export GNET_LOGGING_FILE="/Users/huangzhonghui/logs/sms.log"
+
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -13,8 +18,6 @@ import (
 	cmcc "sms-vgateway/cmcc/protocol"
 )
 
-//
-// export GNET_LOGGING_FILE="/Users/huangzhonghui/logs/sms.log"
 var log = logging.GetDefaultLogger()
 
 func main() {
@@ -34,7 +37,7 @@ func main() {
 		multicore: multicore,
 		pool:      pool,
 	}
-	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore))
+	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Infof("server exits with error: %v", err)
 }
 
@@ -49,35 +52,40 @@ type Server struct {
 }
 
 func (s *Server) OnBoot(eng gnet.Engine) (action gnet.Action) {
-	log.Infof("[%-10s] running server on %s with multi-core=%t", "OnBoot", fmt.Sprintf("%s://%s", s.protocol, s.address), s.multicore)
+	log.Infof("[%-9s] running server on %s with multi-core=%t", "OnBoot", fmt.Sprintf("%s://%s", s.protocol, s.address), s.multicore)
 	s.engine = eng
 	return
 }
 
 func (s *Server) OnShutdown(eng gnet.Engine) {
-	log.Infof("[%-10s] shutdown server %s ...", "OnShutdown", fmt.Sprintf("%s://%s", s.protocol, s.address))
+	log.Infof("[%-9s] shutdown server %s ...", "OnShutdown", fmt.Sprintf("%s://%s", s.protocol, s.address))
 	for eng.CountConnections() > 0 {
-		log.Infof("[%-10s] active connections is %d, waiting...", eng.CountConnections())
+		log.Infof("[%-9s] active connections is %d, waiting...", eng.CountConnections())
 		time.Sleep(10 * time.Millisecond)
 	}
-	log.Infof("[%-10s] shutdown server %s completed!", "OnShutdown", fmt.Sprintf("%s://%s", s.protocol, s.address))
+	log.Infof("[%-9s] shutdown server %s completed!", "OnShutdown", fmt.Sprintf("%s://%s", s.protocol, s.address))
 }
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	log.Infof("[%-10s] [%v<->%v] activeCons=%d.", "OnOpen", c.RemoteAddr(), c.LocalAddr(), s.activeCons())
-	return
+	if s.countConn() >= cmcc.Conf.MaxCons {
+		log.Warnf("[%-9s] [%v<->%v] threshold reached, closing the connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
+		return nil, gnet.Close
+	} else {
+		log.Infof("[%-9s] [%v<->%v] activeCons=%d.", "OnOpen", c.RemoteAddr(), c.LocalAddr(), s.activeCons())
+		return
+	}
 }
 
 func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
-	log.Warnf("[%-10s] [%v<->%v] activeCons=%d, reason=%+v.", "OnClose", c.RemoteAddr(), c.LocalAddr(), s.activeCons(), e)
+	log.Warnf("[%-9s] [%v<->%v] activeCons=%d, reason=%v.", "OnClose", c.RemoteAddr(), c.LocalAddr(), s.activeCons(), e)
+	s.connectedSockets.Delete(c.RemoteAddr().String())
 	return
 }
 
-// OnTraffic fires when a local socket receives data from the peer.
 func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	header := getHeader(c)
 	if header == nil {
-		log.Warnf("[%-10s] [%v<->%v] decode error, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
+		log.Warnf("[%-9s] [%v<->%v] decode error, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
 		return gnet.Close
 	}
 
@@ -90,7 +98,9 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	case cmcc.CMPP_DELIVER:
 	case cmcc.CMPP_DELIVER_RESP:
 	case cmcc.CMPP_ACTIVE_TEST:
+		return handActive(s, c, header)
 	case cmcc.CMPP_ACTIVE_TEST_RESP:
+		return handActiveResp(c, header)
 	case cmcc.CMPP_TERMINATE:
 	case cmcc.CMPP_TERMINATE_RESP:
 	}
@@ -98,47 +108,101 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	return gnet.None
 }
 
-// OnTick fires immediately after the engine starts and will fire again
-// following the duration specified by the delay return value.
 func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
-	return
+	log.Infof("[%-9s] %d active connections.", "OnTick", s.activeCons())
+	s.connectedSockets.Range(func(key, value interface{}) bool {
+		_ = s.pool.Submit(func() {
+			addr := key.(string)
+			c, ok := value.(gnet.Conn)
+			if ok {
+				// TODO SEQ
+				at := cmcc.NewActiveTest(rand.Uint32())
+				err := c.AsyncWrite(at.Encode(), nil)
+				if err == nil {
+					log.Infof("[%-9s] >>> %s to %s", "OnTick", at, addr)
+				} else {
+					log.Errorf("[%-9s] >>> CMPP_ACTIVE_TEST to %s, error: %v", "OnTick", addr, err)
+				}
+			}
+		})
+		return true
+	})
+	return cmcc.Conf.ActiveTestDuration, gnet.None
 }
 
+func (s *Server) countConn() int {
+	size := 0
+	s.connectedSockets.Range(func(key, value interface{}) bool {
+		size++
+		return true
+	})
+	return size
+}
+
+// 处理连接请求，目标存在两个问题
+// 1. 在同时上来一些连接时，可能控制不住连接总数为 Conf.MaxCons
+// 2. 错误的连接或过多的连接，目前无法正常发送响应，因为发送响应时Close Action已触发，连接会进行关闭
 func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
 	action = gnet.None
 	frame := take(c, cmcc.LEN_CMPP_CONNECT-cmcc.HEAD_LENGTH)
-	log.Debugf("%-10s Hex: %x", "Connect", frame)
+	logHex(logging.DebugLevel, "Connect", frame)
 
 	connect := &cmcc.CmppConnect{}
 	err := connect.Decode(header, frame)
 	if err != nil {
-		log.Errorf("CMPP_CONNECT ERROR: %v", err)
+		log.Errorf("[%-9s] CMPP_CONNECT ERROR: %v", "OnTraffic", err)
 		return gnet.Close
 	}
 
-	log.Infof("%-9s<<< %s", "receive", connect)
+	log.Infof("[%-9s] <<< %s", "OnTraffic", connect)
 	resp := connect.ToResponse()
 	if resp.Status != 0 {
-		log.Errorf("CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", resp.Status, cmcc.ConnectStatusMap[resp.Status])
+		log.Errorf("[%-9s] CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", "OnTraffic", resp.Status, cmcc.ConnectStatusMap[resp.Status])
 		action = gnet.Close
 	}
-	if s.activeCons() >= cmcc.Conf.MaxCons {
+	if s.countConn() >= cmcc.Conf.MaxCons {
 		resp.Status = 5 // 其他错误,连接数过多
 		action = gnet.Close
 	}
 
-	// send cmpp_connect_resp
+	// send cmpp_connect_resp async
 	_ = s.pool.Submit(func() {
-		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
-			s.connectedSockets.Store(c.RemoteAddr().String(), c)
-			log.Infof("%-9s>>> %s", "send", resp)
+		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
+			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
+			if resp.Status == 0 {
+				s.connectedSockets.Store(c.RemoteAddr().String(), c)
+			}
 			return nil
 		})
 		if err != nil {
-			log.Errorf("CMPP_CONNECT_RESP ERROR: %v", err)
+			log.Errorf("[%-9s] CMPP_CONNECT_RESP ERROR: %v", "OnTraffic", err)
 		}
 	})
 	return action
+}
+
+func handActive(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
+	respHeader := &cmcc.MessageHeader{TotalLength: cmcc.HEAD_LENGTH, CommandId: cmcc.CMPP_ACTIVE_TEST_RESP, SequenceId: header.SequenceId}
+	resp := &cmcc.ActiveTestResp{MessageHeader: respHeader}
+	// send cmpp_connect_resp async
+	_ = s.pool.Submit(func() {
+		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
+			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
+			return nil
+		})
+		if err != nil {
+			log.Errorf("[%-9s] CMPP_ACTIVE_TEST_RESP ERROR: %v", "OnTraffic", err)
+		}
+	})
+	return gnet.None
+}
+
+func handActiveResp(c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
+	if c.InboundBuffered() >= 1 {
+		_, _ = c.Discard(1)
+	}
+	log.Infof("[%-9s] <<< %s from %s", "OnTraffic", &cmcc.ActiveTestResp{MessageHeader: header}, c.RemoteAddr())
+	return gnet.None
 }
 
 func getHeader(c gnet.Conn) *cmcc.MessageHeader {
@@ -146,11 +210,12 @@ func getHeader(c gnet.Conn) *cmcc.MessageHeader {
 	if frame == nil {
 		return nil
 	}
-	log.Debugf("%-10s Hex: %x", "Header", frame)
+	logHex(logging.DebugLevel, "Header", frame)
+
 	header := cmcc.MessageHeader{}
 	err := header.Decode(frame)
 	if err != nil {
-		log.Errorf("decode error: %v", err)
+		log.Errorf("[%-9s] decode error: %v", "OnTraffic", err)
 		return nil
 	}
 	return &header
@@ -163,15 +228,28 @@ func take(c gnet.Conn, bytes int) []byte {
 	}
 	frame, err := c.Peek(bytes)
 	if err != nil {
-		log.Errorf("decode error: %v", err)
+		log.Errorf("[%-9s] decode error: %v", "OnTraffic", err)
 		return nil
 	}
 	_, err = c.Discard(bytes)
 	if err != nil {
-		log.Errorf("decode error: %v", err)
+		log.Errorf("[%-9s] decode error: %v", "OnTraffic", err)
 		return nil
 	}
 	return frame
+}
+
+func logHex(level logging.Level, model string, bts []byte) {
+	msg := fmt.Sprintf("[OnTraffic] Hex %s: %x", model, bts)
+	if level == logging.DebugLevel {
+		log.Debugf(msg)
+	} else if level == logging.ErrorLevel {
+		log.Errorf(msg)
+	} else if level == logging.WarnLevel {
+		log.Warnf(msg)
+	} else {
+		log.Infof(msg)
+	}
 }
 
 func (s *Server) activeCons() int {

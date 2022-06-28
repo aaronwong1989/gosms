@@ -1,4 +1,6 @@
+# 目前仅支持模拟单一 sourceAddr
 sourceAddr: "123456"
 sharedSecret: "shared secret"
 version: 48
 max-cons: 3
+active-test-duration: 60s

@@ -3,6 +3,7 @@ package cmcc
 import (
 	"io/ioutil"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -10,10 +11,11 @@ import (
 var Conf Config
 
 type Config struct {
-	SourceAddr   string `yaml:"sourceAddr"`
-	SharedSecret string `yaml:"sharedSecret"`
-	Version      uint8  `yaml:"version"`
-	MaxCons      int    `yaml:"max-cons"`
+	SourceAddr         string        `yaml:"sourceAddr"`
+	SharedSecret       string        `yaml:"sharedSecret"`
+	Version            uint8         `yaml:"version"`
+	MaxCons            int           `yaml:"max-cons"`
+	ActiveTestDuration time.Duration `yaml:"active-test-duration"`
 }
 
 func init() {

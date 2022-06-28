@@ -2,24 +2,60 @@ package main
 
 import (
 	"net"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	cmcc "sms-vgateway/cmcc/protocol"
 )
 
-func TestSendConnect(t *testing.T) {
-	c, err := net.Dial("tcp", ":9000")
-	if err != nil {
-		log.Errorf("%v", err)
+func TestClient(t *testing.T) {
+	concurrency := 4
+	var wg sync.WaitGroup
+	wg.Add(concurrency)
+	for i := 0; i < concurrency; i++ {
+		runClient(t, &wg)
+		time.Sleep(time.Millisecond * 10)
 	}
-	defer func(c net.Conn) {
-		err := c.Close()
+	wg.Wait()
+}
+
+func runClient(t *testing.T, wg *sync.WaitGroup) {
+	go func(t *testing.T) {
+		c, err := net.Dial("tcp", ":9000")
 		if err != nil {
 			log.Errorf("%v", err)
 		}
-	}(c)
+		defer func(c net.Conn) {
+			err := c.Close()
+			if err != nil {
+				log.Errorf("%v", err)
+			}
+		}(c)
+
+		sendConnect(t, c)
+
+		for {
+			bytes := make([]byte, 12)
+			_, err := c.Read(bytes)
+			if err != nil {
+				return
+			}
+			t.Logf("read %x from %s", bytes, c.RemoteAddr().String())
+			header := &cmcc.MessageHeader{}
+			_ = header.Decode(bytes)
+			if header.CommandId == cmcc.CMPP_ACTIVE_TEST {
+				at := cmcc.ActiveTest{MessageHeader: header}
+				_, _ = c.Write(at.ToResponse().Encode())
+			}
+		}
+		wg.Done()
+	}(t)
+}
+
+func sendConnect(t *testing.T, c net.Conn) {
 	con := cmcc.NewConnect()
 	t.Logf("send: %s", con)
 	i, _ := c.Write(con.Encode())
@@ -29,14 +65,15 @@ func TestSendConnect(t *testing.T) {
 	assert.True(t, i == cmcc.LEN_CMPP_CONNECT_RESP)
 
 	header := &cmcc.MessageHeader{}
-	err = header.Decode(resp)
+	err := header.Decode(resp)
 	if err != nil {
 		return
 	}
-	pdu := &cmcc.CmppConnectResp{}
-	err = pdu.Decode(header, resp[cmcc.HEAD_LENGTH:])
+	rep := &cmcc.CmppConnectResp{}
+	err = rep.Decode(header, resp[cmcc.HEAD_LENGTH:])
 	if err != nil {
 		return
 	}
-	t.Logf("receive: %s", pdu)
+	t.Logf("receive: %s", rep)
+	assert.True(t, 0 == rep.Status)
 }
