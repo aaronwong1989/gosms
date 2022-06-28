@@ -27,7 +27,7 @@ func TestMessageHeader_Decode(t *testing.T) {
 	copy(frame[12:16], "1234")
 
 	header := MessageHeader{}
-	header.Decode(frame)
+	_ = header.Decode(frame)
 	t.Logf("%v", header)
 	t.Logf("%s", frame[12:16])
 	t.Logf("% x", frame[12:16])
