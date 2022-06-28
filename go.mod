@@ -1,4 +1,4 @@
-module sms-adapter
+module sms-vgateway
 
 go 1.18
 

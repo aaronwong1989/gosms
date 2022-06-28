@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	cmcc "sms-adapter/cmcc/protocol"
+	cmcc "sms-vgateway/cmcc/protocol"
 )
 
 func TestSendConnect(t *testing.T) {

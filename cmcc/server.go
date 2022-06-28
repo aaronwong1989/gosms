@@ -10,7 +10,7 @@ import (
 	"github.com/panjf2000/gnet/v2/pkg/logging"
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 
-	cmcc "sms-adapter/cmcc/protocol"
+	cmcc "sms-vgateway/cmcc/protocol"
 )
 
 //
