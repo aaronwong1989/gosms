@@ -1,0 +1,4 @@
+sourceAddr: "123456"
+sharedSecret: "shared secret"
+version: 48
+max-cons: 3

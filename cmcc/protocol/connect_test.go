@@ -17,7 +17,7 @@ func TestCmppConnect_Encode(t *testing.T) {
 	connect.SourceAddr = "123456"
 	connect.Version = 0x30
 	connect.Timestamp = uint32(1001235010)
-	md5str := reqAuthStr(connect)
+	md5str := reqAuthMd5(connect)
 	connect.AuthenticatorSource = string(md5str[:])
 	t.Logf("%s", connect)
 

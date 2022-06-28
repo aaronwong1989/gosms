@@ -24,9 +24,9 @@ func TestSendConnect(t *testing.T) {
 	t.Logf("send: %s", con)
 	i, _ := c.Write(con.Encode())
 	assert.True(t, uint32(i) == con.TotalLength)
-	resp := make([]byte, 33)
+	resp := make([]byte, cmcc.LEN_CMPP_CONNECT_RESP)
 	i, _ = c.Read(resp)
-	assert.True(t, i == 33)
+	assert.True(t, i == cmcc.LEN_CMPP_CONNECT_RESP)
 
 	header := &cmcc.MessageHeader{}
 	err = header.Decode(resp)
@@ -34,7 +34,7 @@ func TestSendConnect(t *testing.T) {
 		return
 	}
 	pdu := &cmcc.CmppConnectResp{}
-	err = pdu.Decode(header, resp[12:])
+	err = pdu.Decode(header, resp[cmcc.HEAD_LENGTH:])
 	if err != nil {
 		return
 	}

@@ -7,7 +7,6 @@ import (
 )
 
 var ErrorPacket = errors.New("error packet")
-var Version = uint8(0x32)
 
 type MessageHeader struct {
 	TotalLength uint32
@@ -16,8 +15,8 @@ type MessageHeader struct {
 }
 
 func (header *MessageHeader) Encode() []byte {
-	if header.TotalLength < 12 {
-		header.TotalLength = 12
+	if header.TotalLength < HEAD_LENGTH {
+		header.TotalLength = HEAD_LENGTH
 	}
 	frame := make([]byte, header.TotalLength)
 	binary.BigEndian.PutUint32(frame[0:4], header.TotalLength)
@@ -27,7 +26,7 @@ func (header *MessageHeader) Encode() []byte {
 }
 
 func (header *MessageHeader) Decode(frame []byte) error {
-	if len(frame) < 12 {
+	if len(frame) < HEAD_LENGTH {
 		return ErrorPacket
 	}
 	header.TotalLength = binary.BigEndian.Uint32(frame[0:4])
@@ -37,19 +36,24 @@ func (header *MessageHeader) Decode(frame []byte) error {
 }
 
 func (header *MessageHeader) String() string {
-	return fmt.Sprintf("{TotalLength: %d, CommandId: %s, SequenceId: %d}", header.TotalLength, CommandMap[header.CommandId], header.SequenceId)
+	return fmt.Sprintf("{ TotalLength: %d, CommandId: %s, SequenceId: %d }", header.TotalLength, CommandMap[header.CommandId], header.SequenceId)
 }
 
-var CMPP_CONNECT = uint32(0x00000001)          // 请求连接
-var CMPP_CONNECT_RESP = uint32(0x80000001)     // 请求连接应答
-var CMPP_TERMINATE = uint32(0x00000002)        // 终止连接
-var CMPP_TERMINATE_RESP = uint32(0x80000002)   // 终止连接应答
-var CMPP_SUBMIT = uint32(0x00000004)           // 提交短信
-var CMPP_SUBMIT_RESP = uint32(0x80000004)      // 提交短信应答
-var CMPP_DELIVER = uint32(0x00000005)          // 短信下发
-var CMPP_DELIVER_RESP = uint32(0x80000005)     // 下发短信应答
-var CMPP_ACTIVE_TEST = uint32(0x00000008)      // 激活测试
-var CMPP_ACTIVE_TEST_RESP = uint32(0x80000008) // 激活测试应答
+const (
+	HEAD_LENGTH           = 12                 // 报文头长度
+	CMPP_CONNECT          = uint32(0x00000001) // 请求连接
+	LEN_CMPP_CONNECT      = 39                 // CMPP_CONNECT长度
+	CMPP_CONNECT_RESP     = uint32(0x80000001) // 请求连接应答
+	LEN_CMPP_CONNECT_RESP = 33                 // CMPP_CONNECT_RESP长度
+	CMPP_TERMINATE        = uint32(0x00000002) // 终止连接
+	CMPP_TERMINATE_RESP   = uint32(0x80000002) // 终止连接应答
+	CMPP_SUBMIT           = uint32(0x00000004) // 提交短信
+	CMPP_SUBMIT_RESP      = uint32(0x80000004) // 提交短信应答
+	CMPP_DELIVER          = uint32(0x00000005) // 短信下发
+	CMPP_DELIVER_RESP     = uint32(0x80000005) // 下发短信应答
+	CMPP_ACTIVE_TEST      = uint32(0x00000008) // 激活测试
+	CMPP_ACTIVE_TEST_RESP = uint32(0x80000008) // 激活测试应答
+)
 
 // var CMPP_QUERY = uint32(0x00000006)                     // 发送短信状态查询
 // var CMPP_QUERY_RESP = uint32(0x80000006)                // 发送短信状态查询应答

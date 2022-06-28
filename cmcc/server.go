@@ -13,7 +13,7 @@ import (
 	cmcc "sms-adapter/cmcc/protocol"
 )
 
-// export GNET_LOGGING_LEVEL=-1
+//
 // export GNET_LOGGING_FILE="/Users/huangzhonghui/logs/sms.log"
 var log = logging.GetDefaultLogger()
 
@@ -104,9 +104,10 @@ func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 	return
 }
 
-func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
-	frame := take(c, 27)
-	log.Debugf("%x", frame)
+func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
+	action = gnet.None
+	frame := take(c, cmcc.LEN_CMPP_CONNECT-cmcc.HEAD_LENGTH)
+	log.Debugf("%-10s Hex: %x", "Connect", frame)
 
 	connect := &cmcc.CmppConnect{}
 	err := connect.Decode(header, frame)
@@ -114,14 +115,19 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 		log.Errorf("CMPP_CONNECT ERROR: %v", err)
 		return gnet.Close
 	}
-	result := connect.Check()
+
 	log.Infof("%-9s<<< %s", "receive", connect)
-	if result != 0 {
-		log.Errorf("CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", result, cmcc.ConnectStatusMap[result])
-		return gnet.Close
-	}
-	// send cmpp_connect_resp
 	resp := connect.ToResponse()
+	if resp.Status != 0 {
+		log.Errorf("CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", resp.Status, cmcc.ConnectStatusMap[resp.Status])
+		action = gnet.Close
+	}
+	if s.activeCons() >= cmcc.Conf.MaxCons {
+		resp.Status = 5 // 其他错误,连接数过多
+		action = gnet.Close
+	}
+
+	// send cmpp_connect_resp
 	_ = s.pool.Submit(func() {
 		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			s.connectedSockets.Store(c.RemoteAddr().String(), c)
@@ -132,14 +138,15 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 			log.Errorf("CMPP_CONNECT_RESP ERROR: %v", err)
 		}
 	})
-	return gnet.None
+	return action
 }
 
 func getHeader(c gnet.Conn) *cmcc.MessageHeader {
-	frame := take(c, 12)
+	frame := take(c, cmcc.HEAD_LENGTH)
 	if frame == nil {
 		return nil
 	}
+	log.Debugf("%-10s Hex: %x", "Header", frame)
 	header := cmcc.MessageHeader{}
 	err := header.Decode(frame)
 	if err != nil {

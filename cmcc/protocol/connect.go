@@ -25,19 +25,19 @@ func NewConnect() *CmppConnect {
 	header.CommandId = CMPP_CONNECT
 	header.SequenceId = rand.Uint32()
 	con.MessageHeader = header
-	con.Version = Version
-	con.SourceAddr = "123456"
+	con.Version = Conf.Version
+	con.SourceAddr = Conf.SourceAddr
 	// 2006-1-2 15:04:05
 	ts, _ := strconv.ParseUint(time.Now().Format("0102150405"), 10, 32)
 	con.Timestamp = uint32(ts)
-	ss := reqAuthStr(con)
+	ss := reqAuthMd5(con)
 	con.AuthenticatorSource = string(ss[:])
 	return con
 }
 
 func (connect *CmppConnect) Encode() []byte {
 	frame := connect.MessageHeader.Encode()
-	if len(frame) == 39 && connect.TotalLength == 39 {
+	if len(frame) == LEN_CMPP_CONNECT && connect.TotalLength == LEN_CMPP_CONNECT {
 		copy(frame[12:18], connect.SourceAddr)
 		copy(frame[18:34], connect.AuthenticatorSource)
 		frame[34] = connect.Version
@@ -48,7 +48,7 @@ func (connect *CmppConnect) Encode() []byte {
 
 func (connect *CmppConnect) Decode(header *MessageHeader, frame []byte) error {
 	// check
-	if header == nil || header.CommandId != CMPP_CONNECT || len(frame) < 27 {
+	if header == nil || header.CommandId != CMPP_CONNECT || len(frame) < (LEN_CMPP_CONNECT-HEAD_LENGTH) {
 		return ErrorPacket
 	}
 	connect.MessageHeader = header
@@ -60,17 +60,17 @@ func (connect *CmppConnect) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (connect *CmppConnect) String() string {
-	return fmt.Sprintf("{Header: %s, SourceAddr: %s, AuthenticatorSource: %x, Version: %x, Timestamp: %v}",
+	return fmt.Sprintf("{ Header: %s, SourceAddr: %s, AuthenticatorSource: %x, Version: %x, Timestamp: %v }",
 		connect.MessageHeader, connect.SourceAddr, connect.AuthenticatorSource, connect.Version, connect.Timestamp)
 }
 
 func (connect *CmppConnect) Check() uint32 {
-	if connect.Version > Version {
+	if connect.Version > Conf.Version {
 		return 4
 	}
 
 	authSource := connect.AuthenticatorSource
-	authMd5 := reqAuthStr(connect)
+	authMd5 := reqAuthMd5(connect)
 	i := bytes.Compare([]byte(authSource), authMd5[:])
 	if i == 0 {
 		return 0
@@ -81,7 +81,7 @@ func (connect *CmppConnect) Check() uint32 {
 func (connect *CmppConnect) ToResponse() *CmppConnectResp {
 	response := &CmppConnectResp{}
 	header := &MessageHeader{}
-	header.TotalLength = 33
+	header.TotalLength = LEN_CMPP_CONNECT_RESP
 	header.CommandId = CMPP_CONNECT_RESP
 	header.SequenceId = connect.SequenceId
 	response.MessageHeader = header
@@ -90,20 +90,20 @@ func (connect *CmppConnect) ToResponse() *CmppConnectResp {
 	authDt := make([]byte, 0, 64)
 	authDt = append(authDt, fmt.Sprintf("%d", response.Status)...)
 	authDt = append(authDt, connect.AuthenticatorSource...)
-	authDt = append(authDt, "shared secret"...)
+	authDt = append(authDt, Conf.SharedSecret...)
 	auth := md5.Sum(authDt)
 	response.AuthenticatorISMG = string(auth[:])
-	response.Version = Version
+	response.Version = Conf.Version
 	return response
 }
 
-func reqAuthStr(connect *CmppConnect) [16]byte {
+func reqAuthMd5(connect *CmppConnect) [16]byte {
 	// AuthenticatorSource = MD5(Source_Addr+9 字节的 0 +shared secret+timestamp)
 	// timestamp 格式为: MMDDHHMMSS，即月日时分秒，10 位。
 	authDt := make([]byte, 0, 64)
-	authDt = append(authDt, connect.SourceAddr...)
+	authDt = append(authDt, Conf.SourceAddr...)
 	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-	authDt = append(authDt, "shared secret"...)
+	authDt = append(authDt, Conf.SharedSecret...)
 	authDt = append(authDt, fmt.Sprintf("%d", connect.Timestamp)...)
 	authMd5 := md5.Sum(authDt)
 	return authMd5
@@ -118,7 +118,7 @@ type CmppConnectResp struct {
 
 func (resp *CmppConnectResp) Encode() []byte {
 	frame := resp.MessageHeader.Encode()
-	if len(frame) == 33 && resp.TotalLength == 33 {
+	if len(frame) == LEN_CMPP_CONNECT_RESP && resp.TotalLength == LEN_CMPP_CONNECT_RESP {
 		binary.BigEndian.PutUint32(frame[12:16], resp.Status)
 		copy(frame[16:32], resp.AuthenticatorISMG)
 		frame[32] = resp.Version
@@ -128,7 +128,7 @@ func (resp *CmppConnectResp) Encode() []byte {
 
 func (resp *CmppConnectResp) Decode(header *MessageHeader, frame []byte) error {
 	// check
-	if header == nil || header.CommandId != CMPP_CONNECT_RESP || len(frame) < 21 {
+	if header == nil || header.CommandId != CMPP_CONNECT_RESP || len(frame) < (LEN_CMPP_CONNECT_RESP-HEAD_LENGTH) {
 		return ErrorPacket
 	}
 	resp.MessageHeader = header
@@ -139,7 +139,7 @@ func (resp *CmppConnectResp) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (resp *CmppConnectResp) String() string {
-	return fmt.Sprintf("{Header: %s, Status: %v, AuthenticatorISMG: %x, Version: %x}",
+	return fmt.Sprintf("{ Header: %s, Status: %v, AuthenticatorISMG: %x, Version: %x }",
 		resp.MessageHeader, resp.Status, resp.AuthenticatorISMG, resp.Version)
 }
 
