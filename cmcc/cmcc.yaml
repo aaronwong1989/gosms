@@ -4,3 +4,5 @@ sharedSecret: "shared secret"
 version: 48
 max-cons: 3
 active-test-duration: 60s
+datacenter-id: 0
+worker-id: 0

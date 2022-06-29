@@ -16,6 +16,8 @@ type Config struct {
 	Version            uint8         `yaml:"version"`
 	MaxCons            int           `yaml:"max-cons"`
 	ActiveTestDuration time.Duration `yaml:"active-test-duration"`
+	DataCenterId       int32         `yaml:"datacenter-id"`
+	WorkerId           int32         `yaml:"worker-id"`
 }
 
 func init() {

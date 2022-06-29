@@ -5,17 +5,16 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"time"
 )
 
 type CmppConnect struct {
-	*MessageHeader             // +12 = 12
-	SourceAddr          string // +6 = 18
-	AuthenticatorSource string // +16 = 34
-	Version             uint8  // +1 = 35
-	Timestamp           uint32 // +4 = 39
+	*MessageHeader             // +12 = 12：消息头
+	SourceAddr          string // +6 = 18：源地址，此处为 SP_Id
+	AuthenticatorSource string // +16 = 34： 用于鉴别源地址。其值通过单向 MD5 hash 计算得出，表示如下: AuthenticatorSource = MD5(Source_Addr+9 字节的 0 +shared secret+timestamp) Shared secret 由中国移动与源地址实 体事先商定，timestamp 格式为: MMDDHHMMSS，即月日时分秒，10 位。
+	Version             uint8  // +1 = 35：双方协商的版本号(高位 4bit 表示主 版本号,低位 4bit 表示次版本号)，对 于3.0的版本，高4bit为3，低4位为 0
+	Timestamp           uint32 // +4 = 39：时间戳的明文,由客户端产生,格式为 MMDDHHMMSS，即月日时分秒，10 位数字的整型，右对齐。
 }
 
 func NewConnect() *CmppConnect {
@@ -23,7 +22,7 @@ func NewConnect() *CmppConnect {
 	header := &MessageHeader{}
 	header.TotalLength = 39
 	header.CommandId = CMPP_CONNECT
-	header.SequenceId = rand.Uint32()
+	header.SequenceId = uint32(Sequence.NextVal())
 	con.MessageHeader = header
 	con.Version = Conf.Version
 	con.SourceAddr = Conf.SourceAddr

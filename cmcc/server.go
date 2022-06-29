@@ -7,7 +7,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -115,8 +114,7 @@ func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 			addr := key.(string)
 			c, ok := value.(gnet.Conn)
 			if ok {
-				// TODO SEQ
-				at := cmcc.NewActiveTest(rand.Uint32())
+				at := cmcc.NewActiveTest()
 				err := c.AsyncWrite(at.Encode(), nil)
 				if err == nil {
 					log.Infof("[%-9s] >>> %s to %s", "OnTick", at, addr)

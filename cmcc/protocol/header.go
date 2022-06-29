@@ -4,9 +4,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+
+	"sms-vgateway/snowflake32"
 )
 
 var ErrorPacket = errors.New("error packet")
+
+var Sequence = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
 
 type MessageHeader struct {
 	TotalLength uint32

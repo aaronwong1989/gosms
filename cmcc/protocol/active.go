@@ -8,8 +8,8 @@ type ActiveTest struct {
 	*MessageHeader
 }
 
-func NewActiveTest(seq uint32) *ActiveTest {
-	header := &MessageHeader{TotalLength: HEAD_LENGTH, CommandId: CMPP_ACTIVE_TEST, SequenceId: seq}
+func NewActiveTest() *ActiveTest {
+	header := &MessageHeader{TotalLength: HEAD_LENGTH, CommandId: CMPP_ACTIVE_TEST, SequenceId: uint32(Sequence.NextVal())}
 	return &ActiveTest{header}
 }
 
