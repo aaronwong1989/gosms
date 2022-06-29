@@ -139,11 +139,7 @@ func (s *Server) countConn() int {
 	return size
 }
 
-// 处理连接请求，目标存在两个问题
-// 1. 在同时上来一些连接时，可能控制不住连接总数为 Conf.MaxCons
-// 2. 错误的连接或过多的连接，目前无法正常发送响应，因为发送响应时Close Action已触发，连接会进行关闭
-func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
-	action = gnet.None
+func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
 	frame := take(c, cmcc.LEN_CMPP_CONNECT-cmcc.HEAD_LENGTH)
 	logHex(logging.DebugLevel, "Connect", frame)
 
@@ -158,11 +154,6 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action g
 	resp := connect.ToResponse()
 	if resp.Status != 0 {
 		log.Errorf("[%-9s] CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", "OnTraffic", resp.Status, cmcc.ConnectStatusMap[resp.Status])
-		action = gnet.Close
-	}
-	if s.countConn() >= cmcc.Conf.MaxCons {
-		resp.Status = 5 // 其他错误,连接数过多
-		action = gnet.Close
 	}
 
 	// send cmpp_connect_resp async
@@ -171,6 +162,10 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action g
 			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
 			if resp.Status == 0 {
 				s.connectedSockets.Store(c.RemoteAddr().String(), c)
+			} else {
+				// 发送响应1s后关闭连接
+				time.Sleep(time.Second)
+				_ = c.Close()
 			}
 			return nil
 		})
@@ -178,13 +173,13 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action g
 			log.Errorf("[%-9s] CMPP_CONNECT_RESP ERROR: %v", "OnTraffic", err)
 		}
 	})
-	return action
+	return gnet.None
 }
 
 func handActive(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
 	respHeader := &cmcc.MessageHeader{TotalLength: cmcc.HEAD_LENGTH, CommandId: cmcc.CMPP_ACTIVE_TEST_RESP, SequenceId: header.SequenceId}
 	resp := &cmcc.ActiveTestResp{MessageHeader: respHeader}
-	// send cmpp_connect_resp async
+	// send cmpp_active_resp async
 	_ = s.pool.Submit(func() {
 		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)

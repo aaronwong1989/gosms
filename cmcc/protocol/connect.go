@@ -69,9 +69,9 @@ func (connect *CmppConnect) Check() uint32 {
 		return 4
 	}
 
-	authSource := connect.AuthenticatorSource
+	authSource := []byte(connect.AuthenticatorSource)
 	authMd5 := reqAuthMd5(connect)
-	i := bytes.Compare([]byte(authSource), authMd5[:])
+	i := bytes.Compare(authSource, authMd5[:])
 	if i == 0 {
 		return 0
 	}
