@@ -161,8 +161,7 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 			if resp.Status == 0 {
 				s.connectedSockets.Store(c.RemoteAddr().String(), c)
 			} else {
-				// 发送响应1s后关闭连接
-				time.Sleep(time.Second)
+				// 客户端登录失败，关闭连接
 				_ = c.Close()
 			}
 			return nil
