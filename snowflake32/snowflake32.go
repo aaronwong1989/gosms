@@ -57,7 +57,7 @@ func (s *Snowflake) NextVal() int32 {
 }
 
 func (s *Snowflake) String() string {
-	return fmt.Sprintf("{t: %d, d: %d, w: %d, s: %d}", s.seconds, s.datacenter, s.worker, s.sequence)
+	return fmt.Sprintf("%d:%d:%d:%d", s.seconds, s.datacenter, s.worker, s.sequence)
 }
 
 func passedSeconds() int32 {

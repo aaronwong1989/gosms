@@ -30,6 +30,9 @@ type Snowflake struct {
 	sequence     int64 // 序列号
 }
 
+func NewSnowflake(d int64, w int64) *Snowflake {
+	return &Snowflake{datacenterId: d, workerId: w}
+}
 func (s *Snowflake) NextVal() int64 {
 	s.Lock()
 	now := time.Now().UnixNano() / 1000000 // 转毫秒

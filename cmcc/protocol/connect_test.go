@@ -8,17 +8,17 @@ import (
 
 func TestCmppConnect_Encode(t *testing.T) {
 	header := MessageHeader{
-		TotalLength: uint32(39),
+		TotalLength: 39,
 		CommandId:   CMPP_CONNECT,
-		SequenceId:  uint32(1),
+		SequenceId:  uint32(Sequence32.NextVal()),
 	}
 
 	connect := &CmppConnect{MessageHeader: &header}
-	connect.SourceAddr = "123456"
-	connect.Version = 0x30
-	connect.Timestamp = uint32(1001235010)
+	connect.sourceAddr = "123456"
+	connect.version = 0x30
+	connect.timestamp = uint32(1001235010)
 	md5str := reqAuthMd5(connect)
-	connect.AuthenticatorSource = string(md5str[:])
+	connect.authenticatorSource = string(md5str[:])
 	t.Logf("%s", connect)
 
 	frame := connect.Encode()

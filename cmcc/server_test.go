@@ -57,13 +57,13 @@ func runClient(t *testing.T, wg *sync.WaitGroup) {
 
 func sendConnect(t *testing.T, c net.Conn) {
 	con := cmcc.NewConnect()
-	// con.AuthenticatorSource = "000000" // 反例测试
-	t.Logf("send: %s", con)
+	// con.authenticatorSource = "000000" // 反例测试
+	t.Logf(">>>: %s", con)
 	i, _ := c.Write(con.Encode())
 	assert.True(t, uint32(i) == con.TotalLength)
-	resp := make([]byte, cmcc.LEN_CMPP_CONNECT_RESP)
+	resp := make([]byte, 33)
 	i, _ = c.Read(resp)
-	assert.True(t, i == cmcc.LEN_CMPP_CONNECT_RESP)
+	assert.True(t, i == 33)
 
 	header := &cmcc.MessageHeader{}
 	err := header.Decode(resp)
@@ -75,6 +75,6 @@ func sendConnect(t *testing.T, c net.Conn) {
 	if err != nil {
 		return
 	}
-	t.Logf("receive: %s", rep)
+	t.Logf("<<<: %s", rep)
 	assert.True(t, 0 == rep.Status)
 }

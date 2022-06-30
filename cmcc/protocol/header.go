@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 
+	"sms-vgateway/snowflake"
 	"sms-vgateway/snowflake32"
 )
 
 var ErrorPacket = errors.New("error packet")
 
-var Sequence = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
+var Sequence32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
+var Sequence64 = snowflake.NewSnowflake(int64(Conf.DataCenterId), int64(Conf.WorkerId))
 
 type MessageHeader struct {
 	TotalLength uint32
@@ -46,9 +48,7 @@ func (header *MessageHeader) String() string {
 const (
 	HEAD_LENGTH           = 12                 // 报文头长度
 	CMPP_CONNECT          = uint32(0x00000001) // 请求连接
-	LEN_CMPP_CONNECT      = 39                 // CMPP_CONNECT长度
 	CMPP_CONNECT_RESP     = uint32(0x80000001) // 请求连接应答
-	LEN_CMPP_CONNECT_RESP = 33                 // CMPP_CONNECT_RESP长度
 	CMPP_TERMINATE        = uint32(0x00000002) // 终止连接
 	CMPP_TERMINATE_RESP   = uint32(0x80000002) // 终止连接应答
 	CMPP_SUBMIT           = uint32(0x00000004) // 提交短信

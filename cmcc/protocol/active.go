@@ -9,7 +9,7 @@ type ActiveTest struct {
 }
 
 func NewActiveTest() *ActiveTest {
-	header := &MessageHeader{TotalLength: HEAD_LENGTH, CommandId: CMPP_ACTIVE_TEST, SequenceId: uint32(Sequence.NextVal())}
+	header := &MessageHeader{TotalLength: HEAD_LENGTH, CommandId: CMPP_ACTIVE_TEST, SequenceId: uint32(Sequence32.NextVal())}
 	return &ActiveTest{header}
 }
 
@@ -23,7 +23,7 @@ func (at *ActiveTest) Decode(frame []byte) error {
 
 func (at *ActiveTest) ToResponse() *ActiveTestResp {
 	header := &MessageHeader{TotalLength: HEAD_LENGTH + 1, CommandId: CMPP_ACTIVE_TEST_RESP, SequenceId: at.SequenceId}
-	return &ActiveTestResp{MessageHeader: header, Reserved: 0}
+	return &ActiveTestResp{MessageHeader: header, reserved: 0}
 }
 
 func (at *ActiveTest) String() string {
@@ -32,7 +32,7 @@ func (at *ActiveTest) String() string {
 
 type ActiveTestResp struct {
 	*MessageHeader
-	Reserved byte
+	reserved byte
 }
 
 func (at *ActiveTestResp) Encode() []byte {
@@ -44,5 +44,5 @@ func (at *ActiveTestResp) Decode(frame []byte) error {
 }
 
 func (at *ActiveTestResp) String() string {
-	return fmt.Sprintf("{ TotalLength: %d, CommandId: CMPP_ACTIVE_TEST_RESP, SequenceId: %d, Reserved: %d }", at.TotalLength, at.SequenceId, at.Reserved)
+	return fmt.Sprintf("{ TotalLength: %d, CommandId: CMPP_ACTIVE_TEST_RESP, SequenceId: %d, reserved: %d }", at.TotalLength, at.SequenceId, at.reserved)
 }

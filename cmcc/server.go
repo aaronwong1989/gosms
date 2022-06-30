@@ -138,7 +138,7 @@ func (s *Server) countConn() int {
 }
 
 func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
-	frame := take(c, cmcc.LEN_CMPP_CONNECT-cmcc.HEAD_LENGTH)
+	frame := take(c, 39-cmcc.HEAD_LENGTH)
 	logHex(logging.DebugLevel, "Connect", frame)
 
 	connect := &cmcc.CmppConnect{}

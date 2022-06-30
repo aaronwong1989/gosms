@@ -11,13 +11,26 @@ import (
 var Conf Config
 
 type Config struct {
-	SourceAddr         string        `yaml:"sourceAddr"`
+	// 公共参数
+	SourceAddr         string        `yaml:"sp-id"`
 	SharedSecret       string        `yaml:"sharedSecret"`
 	Version            uint8         `yaml:"version"`
 	MaxCons            int           `yaml:"max-cons"`
 	ActiveTestDuration time.Duration `yaml:"active-test-duration"`
 	DataCenterId       int32         `yaml:"datacenter-id"`
 	WorkerId           int32         `yaml:"worker-id"`
+	// MT消息相关
+	RegisteredDel   uint8         `yaml:"need-report"`
+	MsgLevel        uint8         `yaml:"default-msg-level"`
+	FeeUsertype     uint8         `yaml:"fee-user-type"`
+	FeeTerminalType uint8         `yaml:"fee-terminal-type"`
+	SrcId           string        `yaml:"sms-display-no"`
+	ServiceId       string        `yaml:"service-id"`
+	FeeTerminalId   string        `yaml:"fee-terminal-id"`
+	FeeType         string        `yaml:"fee-type"`
+	FeeCode         string        `yaml:"fee-code"`
+	LinkID          string        `yaml:"link-id"`
+	ValidDuration   time.Duration `yaml:"default-valid-duration"`
 }
 
 func init() {

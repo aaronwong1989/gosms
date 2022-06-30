@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/panjf2000/gnet/v2 v2.1.0
 	github.com/stretchr/testify v1.7.0
+	golang.org/x/text v0.3.3
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 

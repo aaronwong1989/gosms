@@ -1,8 +1,21 @@
-# 目前仅支持模拟单一 sourceAddr
-sourceAddr: "123456"
+# 目前仅支持模拟单一 SpId
+sp-id: "123456"
 sharedSecret: "shared secret"
 version: 48
 max-cons: 3
 active-test-duration: 60s
 datacenter-id: 0
 worker-id: 0
+
+# 以下为MT发送相关
+sms-display-no: 95566
+need-report: 1
+default-msg-level: 9
+service-id: zy0dzdx1
+default-valid-duration: 2h
+fee-user-type: 2
+fee-terminal-type:
+fee-terminal-id: 0
+fee-type: 05
+fee-code: free
+link-id:
