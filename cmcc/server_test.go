@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 )
 
 var pool = goroutine.Default()
+var counterMt int64
+var counterAt int64
 
 func TestClient(t *testing.T) {
 	clients := 4
@@ -22,7 +25,8 @@ func TestClient(t *testing.T) {
 	for i := 0; i < clients; i++ {
 		runClient(t, senders, receivers)
 	}
-	time.Sleep(5 * time.Minute)
+	time.Sleep(5*time.Minute + time.Second)
+	t.Logf("\n###### counterMt=%d, counterAt=%d ######", counterMt, counterAt)
 }
 
 func runClient(t *testing.T, senders, receivers int) {
@@ -39,7 +43,7 @@ func runClient(t *testing.T, senders, receivers int) {
 			}
 		}(c)
 
-		sendConnect(t, c)
+		login(t, c)
 		time.Sleep(time.Millisecond * 10)
 
 		for i := 0; i < senders; i++ {
@@ -61,7 +65,7 @@ func runClient(t *testing.T, senders, receivers int) {
 	}(t)
 }
 
-func sendConnect(t *testing.T, c net.Conn) {
+func login(t *testing.T, c net.Conn) {
 	con := cmcc.NewConnect()
 	// con.authenticatorSource = "000000" // 反例测试
 	t.Logf(">>>: %s", con)
@@ -120,6 +124,7 @@ func readResp(t *testing.T, c net.Conn) bool {
 			log.Errorf("%v", err)
 			return false
 		} else {
+			atomic.AddInt64(&counterMt, 1)
 			t.Logf("<<< %s", csr)
 		}
 	} else if header.CommandId == cmcc.CMPP_ACTIVE_TEST {
@@ -131,6 +136,7 @@ func readResp(t *testing.T, c net.Conn) bool {
 			log.Errorf("%v", err)
 			return false
 		} else {
+			atomic.AddInt64(&counterAt, 1)
 			t.Logf(">>> %s", ats)
 		}
 	} else {
