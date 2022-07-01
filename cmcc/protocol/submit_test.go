@@ -127,13 +127,17 @@ func TestSubmit_Encode(t *testing.T) {
 		"主人何为言少钱，径须沽取对君酌。\n" +
 		"五花马、千金裘，呼儿将出换美酒，与尔同销万古愁。"
 	phones := []string{"17011112222"}
+
 	mts := NewSubmit(phones, poem, MtAtTime(time.Now().Add(5*time.Minute)))
+
 	var resp *SubmitResp
 	for _, mt := range mts {
 		t.Logf("mt.String()  : %s", mt)
 		resp = mt.ToResponse(0)
 		t.Logf("resp.String(): %s", resp)
+
 		enc := mt.Encode()
+		t.Logf("Hex MT: %#x", enc)
 		header := &MessageHeader{}
 		err := header.Decode(enc[:12])
 		if err != nil {
@@ -144,6 +148,7 @@ func TestSubmit_Encode(t *testing.T) {
 		if err != nil {
 			return
 		}
+
 		t.Logf("decMt.String()  : %s", decMt)
 		assert.Equal(t, mt.msgBytes[6:], ucs2Encode(decMt.msgContent))
 	}
