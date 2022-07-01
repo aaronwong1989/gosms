@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -31,23 +32,27 @@ func main() {
 	defer pool.Release()
 
 	ss := &Server{
-		protocol:  "tcp",
-		address:   fmt.Sprintf(":%d", port),
-		multicore: multicore,
-		pool:      pool,
+		protocol:         "tcp",
+		address:          fmt.Sprintf(":%d", port),
+		multicore:        multicore,
+		pool:             pool,
+		connectedSockets: make(map[string]gnet.Conn),
+		window:           make(chan struct{}, cmcc.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Infof("server exits with error: %v", err)
 }
 
 type Server struct {
+	sync.RWMutex
 	gnet.BuiltinEventEngine
 	engine           gnet.Engine
 	protocol         string
 	address          string
 	multicore        bool
 	pool             *goroutine.Pool
-	connectedSockets sync.Map
+	connectedSockets map[string]gnet.Conn
+	window           chan struct{}
 }
 
 func (s *Server) OnBoot(eng gnet.Engine) (action gnet.Action) {
@@ -77,7 +82,9 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 
 func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
 	log.Warnf("[%-9s] [%v<->%v] activeCons=%d, reason=%v.", "OnClose", c.RemoteAddr(), c.LocalAddr(), s.activeCons(), e)
-	s.connectedSockets.Delete(c.RemoteAddr().String())
+	s.Lock()
+	defer s.Unlock()
+	delete(s.connectedSockets, c.RemoteAddr().String())
 	return
 }
 
@@ -93,6 +100,7 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 		return handleConnect(s, c, header)
 	case cmcc.CMPP_CONNECT_RESP:
 	case cmcc.CMPP_SUBMIT:
+		return handleSubmit(s, c, header)
 	case cmcc.CMPP_SUBMIT_RESP:
 	case cmcc.CMPP_DELIVER:
 	case cmcc.CMPP_DELIVER_RESP:
@@ -109,32 +117,26 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 
 func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 	log.Infof("[%-9s] %d active connections.", "OnTick", s.activeCons())
-	s.connectedSockets.Range(func(key, value interface{}) bool {
+	s.Lock()
+	defer s.Unlock()
+	for addr, con := range s.connectedSockets {
 		_ = s.pool.Submit(func() {
-			addr := key.(string)
-			c, ok := value.(gnet.Conn)
-			if ok {
-				at := cmcc.NewActiveTest()
-				err := c.AsyncWrite(at.Encode(), nil)
-				if err == nil {
-					log.Infof("[%-9s] >>> %s to %s", "OnTick", at, addr)
-				} else {
-					log.Errorf("[%-9s] >>> CMPP_ACTIVE_TEST to %s, error: %v", "OnTick", addr, err)
-				}
+			at := cmcc.NewActiveTest()
+			err := con.AsyncWrite(at.Encode(), nil)
+			if err == nil {
+				log.Infof("[%-9s] >>> %s to %s", "OnTick", at, addr)
+			} else {
+				log.Errorf("[%-9s] >>> CMPP_ACTIVE_TEST to %s, error: %v", "OnTick", addr, err)
 			}
 		})
-		return true
-	})
+	}
 	return cmcc.Conf.ActiveTestDuration, gnet.None
 }
 
 func (s *Server) countConn() int {
-	size := 0
-	s.connectedSockets.Range(func(key, value interface{}) bool {
-		size++
-		return true
-	})
-	return size
+	s.RLock()
+	defer s.RUnlock()
+	return len(s.connectedSockets)
 }
 
 func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
@@ -159,7 +161,9 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
 			if resp.Status == 0 {
-				s.connectedSockets.Store(c.RemoteAddr().String(), c)
+				s.Lock()
+				defer s.Unlock()
+				s.connectedSockets[c.RemoteAddr().String()] = c
 			} else {
 				// 客户端登录失败，关闭连接
 				_ = c.Close()
@@ -168,6 +172,55 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 		})
 		if err != nil {
 			log.Errorf("[%-9s] CMPP_CONNECT_RESP ERROR: %v", "OnTraffic", err)
+		}
+	})
+	return gnet.None
+}
+
+func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
+	// check connect
+	if s.connectedSockets[c.RemoteAddr().String()] == nil {
+		log.Warnf("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
+		return gnet.Close
+	}
+
+	frame := take(c, int(header.TotalLength-cmcc.HEAD_LENGTH))
+	logHex(logging.DebugLevel, "Submit", frame)
+	sub := &cmcc.Submit{}
+	err := sub.Decode(header, frame)
+	if err != nil {
+		log.Errorf("[%-9s] CMPP_SUBMIT ERROR: %v", "OnTraffic", err)
+		return gnet.Close
+	}
+	log.Infof("[%-9s] <<< %s", "OnTraffic", sub)
+	// handle message async
+	_ = s.pool.Submit(func() {
+		// 采用通道控制消息收发速度,向通道发送信号
+		s.window <- struct{}{}
+		defer func() {
+			// defer函数消费信号，确保每个消息的信号最终都会被消费
+			<-s.window
+		}()
+		// TODO 上述实现方式可以控制返回消息的速率，但如果发送方不按照协议控制速度，会导致线程池中的任务越来越多
+
+		// 模拟消息处理耗时，可配置
+		processTime := time.Duration(randNum(cmcc.Conf.MinSubmitRespMs, cmcc.Conf.MaxSubmitRespMs))
+		time.Sleep(processTime * time.Millisecond)
+
+		rtCode := uint32(0)
+		if sub.SequenceId%cmcc.Conf.SuccessRate == 0 {
+			// 失败消息的返回码
+			rtCode = 13
+		}
+		resp := sub.ToResponse(rtCode)
+
+		// 发送响应
+		err = c.AsyncWrite(sub.ToResponse(rtCode).Encode(), func(c gnet.Conn) error {
+			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
+			return nil
+		})
+		if err != nil {
+			log.Errorf("[%-9s] CMPP_SUBMIT_RESP ERROR: %v", "OnTraffic", err)
 		}
 	})
 	return gnet.None
@@ -246,4 +299,9 @@ func logHex(level logging.Level, model string, bts []byte) {
 
 func (s *Server) activeCons() int {
 	return s.engine.CountConnections()
+}
+
+func randNum(min, max int) int {
+	rand.Seed(time.Now().Unix()) // 随机种子
+	return rand.Intn(max-min) + min
 }

@@ -6,6 +6,7 @@ max-cons: 3
 active-test-duration: 60s
 datacenter-id: 0
 worker-id: 0
+receive-window-size: 16
 
 # 以下为MT发送相关
 sms-display-no: 95566
@@ -19,3 +20,12 @@ fee-terminal-id:
 fee-type: 05
 fee-code: free
 link-id:
+
+# 以下是模拟网关运行情况的参数 #
+# 成功率：
+# 95  表示 95%
+# 99  表示 99%
+# 999 表示 99.9%
+success-rate: 99
+min-submit-resp-ms: 5
+max-submit-resp-ms: 999

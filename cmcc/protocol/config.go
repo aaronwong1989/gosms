@@ -19,6 +19,8 @@ type Config struct {
 	ActiveTestDuration time.Duration `yaml:"active-test-duration"`
 	DataCenterId       int32         `yaml:"datacenter-id"`
 	WorkerId           int32         `yaml:"worker-id"`
+	ReceiveWindowSize  int           `yaml:"receive-window-size"`
+
 	// MT消息相关
 	RegisteredDel   uint8         `yaml:"need-report"`
 	MsgLevel        uint8         `yaml:"default-msg-level"`
@@ -31,6 +33,11 @@ type Config struct {
 	FeeCode         string        `yaml:"fee-code"`
 	LinkID          string        `yaml:"link-id"`
 	ValidDuration   time.Duration `yaml:"default-valid-duration"`
+
+	// 模拟网关相关参数
+	SuccessRate     uint32 `yaml:"success-rate"`
+	MinSubmitRespMs int    `yaml:"min-submit-resp-ms"`
+	MaxSubmitRespMs int    `yaml:"max-submit-resp-ms"`
 }
 
 func init() {

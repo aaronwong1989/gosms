@@ -446,7 +446,7 @@ func (sub *Submit) String() string {
 	return fmt.Sprintf("{ header: %s, msgId: %v, pkTotal: %v, pkNumber: %v, registeredDel: %v, "+
 		"msgLevel: %v, serviceId: %v, feeUsertype: %v, feeTerminalId: %v, feeTerminalType: %v, tpPid: %v, "+
 		"tpUdhi: %v, msgFmt: %v, msgSrc: %v, feeType: %v, feeCode: %v, validTime: %v, atTime: %v, srcId: %v, "+
-		"destUsrTl: %v, destTerminalId: [%v], destTerminalType: %v, msgLength: %v, msgBytes: %0X..., linkID: %v }",
+		"destUsrTl: %v, destTerminalId: [%v], destTerminalType: %v, msgLength: %v, msgBytes: %0x..., linkID: %v }",
 		sub.MessageHeader, sub.msgId, sub.pkTotal, sub.pkNumber, sub.registeredDel,
 		sub.msgLevel, sub.serviceId, sub.feeUsertype, sub.feeTerminalId, sub.feeTerminalType, sub.tpPid,
 		sub.tpUdhi, sub.msgFmt, sub.msgSrc, sub.feeType, sub.feeCode, sub.validTime, sub.atTime, sub.srcId,
