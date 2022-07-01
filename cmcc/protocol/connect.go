@@ -138,19 +138,15 @@ func (resp *CmppConnectResp) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (resp *CmppConnectResp) String() string {
-	return fmt.Sprintf("{ Header: %s, Status: %v, AuthenticatorISMG: %x, version: %x }",
-		resp.MessageHeader, resp.Status, resp.AuthenticatorISMG, resp.Version)
+	return fmt.Sprintf("{ Header: %s, Status: {%d: %s}, AuthenticatorISMG: %x, version: %x }",
+		resp.MessageHeader, resp.Status, ConnectStatusMap[resp.Status], resp.AuthenticatorISMG, resp.Version)
 }
 
-var (
-	ConnectStatusMap = make(map[uint32]string)
-)
-
-func init() {
-	ConnectStatusMap[0] = "成功"
-	ConnectStatusMap[1] = "消息结构错"
-	ConnectStatusMap[2] = "非法源地址"
-	ConnectStatusMap[3] = "认证错"
-	ConnectStatusMap[4] = "版本太高"
-	ConnectStatusMap[5] = "其他错误"
+var ConnectStatusMap = map[uint32]string{
+	0: "成功",
+	1: "消息结构错",
+	2: "非法源地址",
+	3: "认证错",
+	4: "版本太高",
+	5: "其他错误",
 }

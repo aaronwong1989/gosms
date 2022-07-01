@@ -1,6 +1,7 @@
 package cmcc
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 	"time"
@@ -61,12 +62,6 @@ type Submit struct {
 	msgContent       string // 信息内容 【MsgLength字节】
 	msgBytes         []byte // 消息内容按照Msg_Fmt编码后的数据
 	linkID           string // 点播业务使用的LinkID，非点播类业务的MT流程不使用该字段 【20字节】
-}
-
-type SubmitResp struct {
-	*MessageHeader
-	msgId  uint64
-	result uint32
 }
 
 func NewSubmit(phones []string, content string, opts ...Option) (messages []*Submit) {
@@ -246,6 +241,12 @@ func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
 	return nil
 }
 
+type SubmitResp struct {
+	*MessageHeader
+	msgId  uint64
+	result uint32
+}
+
 func (sub *Submit) ToResponse(result uint32) *SubmitResp {
 	resp := &SubmitResp{}
 	header := *sub.MessageHeader
@@ -255,6 +256,23 @@ func (sub *Submit) ToResponse(result uint32) *SubmitResp {
 	resp.msgId = uint64(Sequence64.NextVal())
 	resp.result = result
 	return resp
+}
+
+func (resp *SubmitResp) Encode() []byte {
+	frame := resp.MessageHeader.Encode()
+	binary.BigEndian.PutUint64(frame[12:20], resp.msgId)
+	binary.BigEndian.PutUint32(frame[20:24], resp.result)
+	return frame
+}
+func (resp *SubmitResp) Decode(header *MessageHeader, frame []byte) error {
+	// check
+	if header == nil || header.CommandId != CMPP_SUBMIT_RESP || uint32(len(frame)) < (header.TotalLength-HEAD_LENGTH) {
+		return ErrorPacket
+	}
+	resp.MessageHeader = header
+	resp.msgId = binary.BigEndian.Uint64(frame[0:8])
+	resp.result = binary.BigEndian.Uint32(frame[8:12])
+	return nil
 }
 
 func msgSlices(fmt uint8, content string) (slices [][]byte) {
@@ -437,5 +455,22 @@ func (sub *Submit) String() string {
 }
 
 func (resp *SubmitResp) String() string {
-	return fmt.Sprintf("{ header: %s, msgId: %v, result: %v }", resp.MessageHeader, resp.msgId, resp.result)
+	return fmt.Sprintf("{ header: %s, msgId: %v, result: {%d: %s} }", resp.MessageHeader, resp.msgId, resp.result, SubmitResultMap[resp.result])
+}
+
+var SubmitResultMap = map[uint32]string{
+	0:  "正确",
+	1:  "消息结构错",
+	2:  "命令字错",
+	3:  "消息序号重复",
+	4:  "消息长度错",
+	5:  "资费代码错",
+	6:  "超过最大信息长",
+	7:  "业务代码错",
+	8:  "流量控制错",
+	9:  "本网关不负责服务此计费号码",
+	10: "Src_Id 错误",
+	11: "Msg_src 错误",
+	12: "Fee_terminal_Id 错误",
+	13: "Dest_terminal_Id 错误",
 }
