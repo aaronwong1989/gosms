@@ -3,6 +3,9 @@ package cmcc
 import (
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEncode(t *testing.T) {
@@ -92,6 +95,8 @@ func TestNewSubmit(t *testing.T) {
 	mts = NewSubmit(phones, content3)
 	for _, mt := range mts {
 		t.Logf(">>> %s", mt)
+		bts := mt.Encode()
+		t.Logf("mt.Encode():  %#x", bts)
 		t.Logf("<<< %s", mt.ToResponse(0))
 	}
 
@@ -100,5 +105,46 @@ func TestNewSubmit(t *testing.T) {
 	for _, mt := range mts {
 		t.Logf(">>> %s", mt)
 		t.Logf("<<< %s", mt.ToResponse(0))
+	}
+}
+
+func TestSubmit_Decode(t *testing.T) {
+
+}
+
+func TestSubmit_Encode(t *testing.T) {
+	poem := "将进酒\n" +
+		"君不见黄河之水天上来，奔流到海不复回。\n" +
+		"君不见高堂明镜悲白发，朝如青丝暮成雪。\n" +
+		"人生得意须尽欢，莫使金樽空对月。\n" +
+		"天生我材必有用，千金散尽还复来。\n" +
+		"烹羊宰牛且为乐，会须一饮三百杯。\n" +
+		"岑夫子，丹丘生，将进酒，杯莫停。\n" +
+		"与君歌一曲，请君为我倾耳听。\n" +
+		"钟鼓馔玉不足贵，但愿长醉不愿醒。\n" +
+		"古来圣贤皆寂寞，惟有饮者留其名。\n" +
+		"陈王昔时宴平乐，斗酒十千恣欢谑。\n" +
+		"主人何为言少钱，径须沽取对君酌。\n" +
+		"五花马、千金裘，呼儿将出换美酒，与尔同销万古愁。"
+	phones := []string{"17011112222"}
+	mts := NewSubmit(phones, poem, MtAtTime(time.Now().Add(5*time.Minute)))
+	var resp *SubmitResp
+	for _, mt := range mts {
+		t.Logf("mt.String()  : %s", mt)
+		resp = mt.ToResponse(0)
+		t.Logf("resp.String(): %s", resp)
+		enc := mt.Encode()
+		header := &MessageHeader{}
+		err := header.Decode(enc[:12])
+		if err != nil {
+			return
+		}
+		decMt := &Submit{}
+		err = decMt.Decode(header, enc[12:])
+		if err != nil {
+			return
+		}
+		t.Logf("decMt.String()  : %s", decMt)
+		assert.Equal(t, mt.msgBytes[6:], ucs2Encode(decMt.msgContent))
 	}
 }

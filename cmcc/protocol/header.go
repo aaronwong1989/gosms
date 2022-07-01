@@ -45,6 +45,16 @@ func (header *MessageHeader) String() string {
 	return fmt.Sprintf("{ TotalLength: %d, CommandId: %s, SequenceId: %d }", header.TotalLength, CommandMap[header.CommandId], header.SequenceId)
 }
 
+func TrimStr(bts []byte) string {
+	var i = 0
+	for ; i < len(bts); i++ {
+		if bts[i] == 0 {
+			break
+		}
+	}
+	return string(bts[0:i])
+}
+
 const (
 	HEAD_LENGTH           = 12                 // 报文头长度
 	CMPP_CONNECT          = uint32(0x00000001) // 请求连接

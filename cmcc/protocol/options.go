@@ -1,5 +1,9 @@
 package cmcc
 
+import (
+	"time"
+)
+
 type Option func(mtOps *MtOptions)
 
 func loadOptions(options ...Option) *MtOptions {
@@ -69,9 +73,20 @@ func MtSrcId(s string) Option {
 }
 
 // MtAtTime 定时发送时间，格式遵循SMPP3.3协议
-func MtAtTime(s string) Option {
+func MtAtTime(t time.Time) Option {
 	return func(opts *MtOptions) {
-		opts.AtTime = s
+		s := t.Format("060102150405")
+		opts.AtTime = s + "032+"
+	}
+}
+
+// MtAtTimeStr 定时发送时间，格式:yyMMddHHmmss
+func MtAtTimeStr(s string) Option {
+	return func(opts *MtOptions) {
+		if len(s) > 12 {
+			s = s[:12]
+		}
+		opts.AtTime = s + "032+"
 	}
 }
 

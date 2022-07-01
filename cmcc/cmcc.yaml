@@ -15,7 +15,7 @@ service-id: zy0dzdx1
 default-valid-duration: 2h
 fee-user-type: 2
 fee-terminal-type:
-fee-terminal-id: 0
+fee-terminal-id:
 fee-type: 05
 fee-code: free
 link-id:

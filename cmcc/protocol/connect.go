@@ -30,7 +30,7 @@ func NewConnect() *CmppConnect {
 	ts, _ := strconv.ParseUint(time.Now().Format("0102150405"), 10, 32)
 	con.timestamp = uint32(ts)
 	ss := reqAuthMd5(con)
-	con.authenticatorSource = string(ss[:])
+	con.authenticatorSource = TrimStr(ss[:])
 	return con
 }
 
@@ -51,8 +51,8 @@ func (connect *CmppConnect) Decode(header *MessageHeader, frame []byte) error {
 		return ErrorPacket
 	}
 	connect.MessageHeader = header
-	connect.sourceAddr = string(frame[0:6])
-	connect.authenticatorSource = string(frame[6:22])
+	connect.sourceAddr = TrimStr(frame[0:6])
+	connect.authenticatorSource = TrimStr(frame[6:22])
 	connect.version = frame[22]
 	connect.timestamp = binary.BigEndian.Uint32(frame[23:27])
 	return nil
@@ -91,7 +91,7 @@ func (connect *CmppConnect) ToResponse() *CmppConnectResp {
 	authDt = append(authDt, connect.authenticatorSource...)
 	authDt = append(authDt, Conf.SharedSecret...)
 	auth := md5.Sum(authDt)
-	response.AuthenticatorISMG = string(auth[:])
+	response.AuthenticatorISMG = TrimStr(auth[:])
 	response.Version = Conf.Version
 	return response
 }
@@ -132,7 +132,7 @@ func (resp *CmppConnectResp) Decode(header *MessageHeader, frame []byte) error {
 	}
 	resp.MessageHeader = header
 	resp.Status = binary.BigEndian.Uint32(frame[0:4])
-	resp.AuthenticatorISMG = string(frame[4:20])
+	resp.AuthenticatorISMG = TrimStr(frame[4:20])
 	resp.Version = frame[20]
 	return nil
 }

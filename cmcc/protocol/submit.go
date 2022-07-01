@@ -80,9 +80,9 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 
 	submit.destUsrTl = uint8(len(phones))
 	submit.destTerminalId = strings.Join(phones, ",")
-	termIds := make([]byte, 32*submit.destUsrTl)
+	termIds := make([]byte, int(submit.destUsrTl)<<5)
 	for i, p := range phones {
-		copy(termIds[32*i:32*(i+1)], p)
+		copy(termIds[i<<5:(i+1)<<5], p)
 	}
 	submit.termIds = termIds
 
@@ -121,9 +121,134 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 	}
 }
 
-func (s *Submit) ToResponse(result uint32) *SubmitResp {
+func (sub *Submit) Encode() []byte {
+	frame := sub.MessageHeader.Encode()
+	// msgId +8 = 20
+	// Pk_total + 1 = 21
+	frame[20] = sub.pkTotal
+	// Pk_number + 1 = 22
+	frame[21] = sub.pkNumber
+	// Registered_Delivery + 1 = 23
+	frame[22] = sub.registeredDel
+	// Msg_level + 1 = 24
+	frame[23] = sub.msgLevel
+	// Service_Id + 10 = 34
+	copy(frame[24:34], sub.serviceId)
+	// Fee_UserType + 1 = 35
+	frame[34] = sub.feeUsertype
+	// Fee_terminal_Id + 32 = 67
+	copy(frame[35:67], sub.feeTerminalId)
+	// Fee_terminal_type + 1 = 68
+	frame[67] = sub.feeTerminalType
+	// TP_pId	    + 1  = 69
+	frame[68] = sub.tpPid
+	// TP_udhi	  + 1  = 70
+	frame[69] = sub.tpUdhi
+	// Msg_Fmt	  + 1  = 71
+	frame[70] = sub.msgFmt
+	// Msg_src	  + 6  = 77
+	copy(frame[71:77], sub.msgSrc)
+	// FeeType	  + 2  = 79
+	copy(frame[77:79], sub.feeType)
+	// FeeCode	  + 6  = 85
+	copy(frame[79:85], sub.feeCode)
+	// ValId_Time	   + 17  = 102
+	copy(frame[85:102], sub.validTime)
+	// At_Time	     + 17  = 119
+	copy(frame[102:119], sub.atTime)
+	// Src_Id	       + 21  = 140
+	copy(frame[119:140], sub.srcId)
+	// DestUsr_tl	   + 1   = 141
+	frame[140] = sub.destUsrTl
+	// Dest_terminal_Id	     + 32*DestUsr_tl
+	index := 141 + len(sub.termIds)
+	copy(frame[141:index], sub.termIds)
+	// Dest_terminal_type	   + 1
+	frame[index] = sub.destTerminalType
+	index++
+	// Msg_Length	           + 1
+	frame[index] = sub.msgLength
+	index++
+	// Msg_Content	         + Msg_length
+	copy(frame[index:index+len(sub.msgBytes)], sub.msgBytes)
+	index += len(sub.msgBytes)
+	// LinkID 	             + 20
+	copy(frame[index:index+20], sub.linkID)
+	return frame
+}
+
+func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
+	// check
+	if header == nil || header.CommandId != CMPP_SUBMIT || uint32(len(frame)) < (header.TotalLength-HEAD_LENGTH) {
+		return ErrorPacket
+	}
+	sub.MessageHeader = header
+	// msgId +8 = 8
+	// Pk_total + 1 = 9
+	sub.pkTotal = frame[8]
+	// Pk_number + 1 = 10
+	sub.pkNumber = frame[9]
+	// Registered_Delivery + 1 = 11
+	sub.registeredDel = frame[10]
+	// Msg_level + 1 = 12
+	sub.msgLevel = frame[11]
+	// Service_Id + 10 = 22
+	sub.serviceId = TrimStr(frame[12:22])
+	//  Fee_UserType + 1 = 23
+	sub.feeUsertype = frame[22]
+	// Fee_terminal_Id + 32 = 55
+	sub.feeTerminalId = TrimStr(frame[23:55])
+	// Fee_terminal_type + 1 = 56
+	sub.feeTerminalType = frame[55]
+	// TP_pId	    + 1  = 57
+	sub.tpPid = frame[56]
+	// TP_udhi	  + 1  = 58
+	sub.tpUdhi = frame[57]
+	// Msg_Fmt	  + 1  = 59
+	sub.msgFmt = frame[58]
+	// Msg_src	  + 6  = 65
+	sub.msgSrc = TrimStr(frame[59:65])
+	// FeeType	  + 2  = 67
+	sub.feeType = TrimStr(frame[65:67])
+	// FeeCode	  + 6  = 73
+	sub.feeCode = TrimStr(frame[67:73])
+	// ValId_Time	   + 17  = 90
+	sub.validTime = TrimStr(frame[73:90])
+	// At_Time	     + 17  = 107
+	sub.atTime = TrimStr(frame[90:107])
+	// Src_Id	       + 21  = 128
+	sub.srcId = TrimStr(frame[107:128])
+	// DestUsr_tl	   + 1   = 129
+	sub.destUsrTl = frame[128]
+	// Dest_terminal_Id	     + 32*DestUsr_tl
+	index := 129 + int(sub.destUsrTl)<<5
+	sub.destTerminalId = TrimStr(frame[129:index])
+	// Dest_terminal_type	   + 1
+	sub.destTerminalType = frame[index]
+	index++
+	// Msg_Length	           + 1
+	sub.msgLength = frame[index]
+	index++
+	// Msg_Content	         + Msg_length
+	content := frame[index : index+int(sub.msgLength)]
+	sub.msgBytes = content
+	if content[0] == 0x05 && content[1] == 0x00 && content[2] == 0x03 {
+		content = content[6:]
+	}
+	if sub.msgFmt == 8 {
+		sub.msgContent = ucs2Decode(content)
+	} else {
+		sub.msgContent = TrimStr(content)
+	}
+	index += int(sub.msgLength)
+	// LinkID 	             + 20
+	sub.linkID = TrimStr(frame[index : index+20])
+	return nil
+}
+
+func (sub *Submit) ToResponse(result uint32) *SubmitResp {
 	resp := &SubmitResp{}
-	header := *s.MessageHeader
+	header := *sub.MessageHeader
 	resp.MessageHeader = &header
 	resp.CommandId = CMPP_SUBMIT_RESP
 	resp.TotalLength = HEAD_LENGTH + 12
@@ -205,7 +330,7 @@ func ucs2Decode(ucs2 []byte) string {
 	if err != nil {
 		return ""
 	}
-	return string(bts)
+	return TrimStr(bts)
 }
 
 // 通过消息内容判断，设置编码格式。
@@ -259,7 +384,8 @@ func setOptions(sub *Submit, opts *MtOptions) {
 	if opts.ValidTime != "" {
 		sub.validTime = opts.ValidTime
 	} else {
-		s := time.Now().Add(Conf.ValidDuration).Format("20060102150304")
+		t := time.Now().Add(Conf.ValidDuration)
+		s := t.Format("060102150405")
 		sub.validTime = s + "032+"
 	}
 
@@ -294,8 +420,8 @@ func setOptions(sub *Submit, opts *MtOptions) {
 	}
 }
 
-func (s *Submit) String() string {
-	l := len(s.msgBytes)
+func (sub *Submit) String() string {
+	l := len(sub.msgBytes)
 	if l > 6 {
 		l = 6
 	}
@@ -303,13 +429,13 @@ func (s *Submit) String() string {
 		"msgLevel: %v, serviceId: %v, feeUsertype: %v, feeTerminalId: %v, feeTerminalType: %v, tpPid: %v, "+
 		"tpUdhi: %v, msgFmt: %v, msgSrc: %v, feeType: %v, feeCode: %v, validTime: %v, atTime: %v, srcId: %v, "+
 		"destUsrTl: %v, destTerminalId: [%v], destTerminalType: %v, msgLength: %v, msgBytes: %0X..., linkID: %v }",
-		s.MessageHeader, s.msgId, s.pkTotal, s.pkNumber, s.registeredDel,
-		s.msgLevel, s.serviceId, s.feeUsertype, s.feeTerminalId, s.feeTerminalType, s.tpPid,
-		s.tpUdhi, s.msgFmt, s.msgSrc, s.feeType, s.feeCode, s.validTime, s.atTime, s.srcId,
-		s.destUsrTl, s.destTerminalId, s.destTerminalType, s.msgLength, s.msgBytes[0:l], s.linkID,
+		sub.MessageHeader, sub.msgId, sub.pkTotal, sub.pkNumber, sub.registeredDel,
+		sub.msgLevel, sub.serviceId, sub.feeUsertype, sub.feeTerminalId, sub.feeTerminalType, sub.tpPid,
+		sub.tpUdhi, sub.msgFmt, sub.msgSrc, sub.feeType, sub.feeCode, sub.validTime, sub.atTime, sub.srcId,
+		sub.destUsrTl, sub.destTerminalId, sub.destTerminalType, sub.msgLength, sub.msgBytes[0:l], sub.linkID,
 	)
 }
 
-func (s *SubmitResp) String() string {
-	return fmt.Sprintf("{ header: %s, msgId: %v, result: %v }", s.MessageHeader, s.msgId, s.result)
+func (resp *SubmitResp) String() string {
+	return fmt.Sprintf("{ header: %s, msgId: %v, result: %v }", resp.MessageHeader, resp.msgId, resp.result)
 }
