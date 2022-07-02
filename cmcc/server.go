@@ -39,7 +39,6 @@ func main() {
 		connectedSockets: make(map[string]gnet.Conn),
 		window:           make(chan struct{}, cmcc.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
-	log.Warnf("server(%s://%s) stating....", ss.protocol, ss.address)
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
 }
@@ -73,10 +72,10 @@ func (s *Server) OnShutdown(eng gnet.Engine) {
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 	if s.countConn() >= cmcc.Conf.MaxCons {
-		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：connections threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
+		log.Infof("[%-9s] [%v<->%v] FLOW CONTROL：connections threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		return nil, gnet.Close
 	} else if len(s.window) == cmcc.Conf.ReceiveWindowSize {
-		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：receive window threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
+		log.Infof("[%-9s] [%v<->%v] FLOW CONTROL：receive window threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		// 已达到窗口时，拒绝新的连接
 		return nil, gnet.Close
 	} else {
@@ -86,7 +85,7 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 }
 
 func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
-	log.Warnf("[%-9s] [%v<->%v] activeCons=%d, reason=%v.", "OnClose", c.RemoteAddr(), c.LocalAddr(), s.activeCons(), e)
+	log.Infof("[%-9s] [%v<->%v] activeCons=%d, reason=%v.", "OnClose", c.RemoteAddr(), c.LocalAddr(), s.activeCons(), e)
 	s.Lock()
 	defer s.Unlock()
 	delete(s.connectedSockets, c.RemoteAddr().String())
@@ -96,7 +95,7 @@ func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
 func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	header := getHeader(c)
 	if header == nil {
-		log.Warnf("[%-9s] [%v<->%v] decode error, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
+		log.Infof("[%-9s] [%v<->%v] decode error, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
 		return gnet.Close
 	}
 	action = checkReceiveWindow(s, c, header)
@@ -189,7 +188,7 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
 	// check connect
 	if s.connectedSockets[c.RemoteAddr().String()] == nil {
-		log.Warnf("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
+		log.Infof("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
 		return gnet.Close
 	}
 
@@ -201,7 +200,7 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 		log.Errorf("[%-9s] CMPP_SUBMIT ERROR: %v", "OnTraffic", err)
 		return gnet.Close
 	}
-	log.Infof("[%-9s] <<< %s", "OnTraffic", sub)
+	log.Debugf("[%-9s] <<< %s", "OnTraffic", sub)
 	// handle message async
 	_ = s.pool.Submit(func() {
 		// 采用通道控制消息收发速度,向通道发送信号
@@ -225,7 +224,7 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 
 		// 发送响应
 		err = c.AsyncWrite(sub.ToResponse(rtCode).Encode(), func(c gnet.Conn) error {
-			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
+			log.Debugf("[%-9s] >>> %s", "OnTraffic", resp)
 			return nil
 		})
 		if err != nil {
@@ -288,7 +287,7 @@ func checkReceiveWindow(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet
 		resp := sub.ToResponse(8)
 		// 发送响应
 		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
-			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
+			log.Debugf("[%-9s] >>> %s", "OnTraffic", resp)
 			return nil
 		})
 		if err != nil {

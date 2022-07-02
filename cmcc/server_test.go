@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -18,16 +19,25 @@ var pool = goroutine.Default()
 var counterMt int64
 var counterAt int64
 var duration = time.Minute
+var wg sync.WaitGroup
 
 func TestClient(t *testing.T) {
 	clients := 1
 	senders := 1
 	receivers := 1
+	wg.Add(1)
+
+	defer func() {
+		pool.Release()
+		wg.Done()
+	}()
+
 	for i := 0; i < clients; i++ {
 		runClient(t, senders, receivers)
 	}
-	time.Sleep(duration + time.Second)
-	t.Logf("\n###### counterMt=%d, counterAt=%d ######", counterMt, counterAt)
+
+	time.Sleep(duration)
+	t.Logf("###### counterMt=%d, counterAt=%d ######", counterMt, counterAt)
 }
 
 func runClient(t *testing.T, senders, receivers int) {
@@ -62,7 +72,7 @@ func runClient(t *testing.T, senders, receivers int) {
 				}
 			})
 		}
-		time.Sleep(duration)
+		wg.Wait()
 	}(t)
 }
 
