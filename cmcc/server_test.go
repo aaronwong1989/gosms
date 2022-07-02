@@ -17,15 +17,16 @@ import (
 var pool = goroutine.Default()
 var counterMt int64
 var counterAt int64
+var duration = time.Minute
 
 func TestClient(t *testing.T) {
-	clients := 4
+	clients := 1
 	senders := 1
 	receivers := 1
 	for i := 0; i < clients; i++ {
 		runClient(t, senders, receivers)
 	}
-	time.Sleep(5*time.Minute + time.Second)
+	time.Sleep(duration + time.Second)
 	t.Logf("\n###### counterMt=%d, counterAt=%d ######", counterMt, counterAt)
 }
 
@@ -33,13 +34,13 @@ func runClient(t *testing.T, senders, receivers int) {
 	go func(t *testing.T) {
 		c, err := net.Dial("tcp", ":9000")
 		if err != nil {
-			log.Errorf("%v", err)
+			t.Errorf("%v", err)
 			return
 		}
 		defer func(c net.Conn) {
 			err := c.Close()
 			if err != nil {
-				log.Errorf("%v", err)
+				t.Errorf("%v", err)
 			}
 		}(c)
 
@@ -61,7 +62,7 @@ func runClient(t *testing.T, senders, receivers int) {
 				}
 			})
 		}
-		time.Sleep(5 * time.Minute)
+		time.Sleep(duration)
 	}(t)
 }
 
@@ -94,7 +95,7 @@ func sendMt(t *testing.T, c net.Conn) bool {
 	mt := mts[0]
 	_, err := c.Write(mt.Encode())
 	if err != nil {
-		log.Errorf("%v", err)
+		t.Errorf("%v", err)
 		return false
 	}
 	t.Logf(">>> %s", mt)
@@ -105,7 +106,7 @@ func readResp(t *testing.T, c net.Conn) bool {
 	bytes := make([]byte, 12)
 	_, err := c.Read(bytes)
 	if err != nil {
-		log.Errorf("%v", err)
+		t.Errorf("%v", err)
 		return false
 	}
 	header := &cmcc.MessageHeader{}
@@ -114,14 +115,14 @@ func readResp(t *testing.T, c net.Conn) bool {
 	bytes = make([]byte, l)
 	l, err = c.Read(bytes)
 	if err != nil {
-		log.Errorf("%v", err)
+		t.Errorf("%v", err)
 		return false
 	}
 	if header.CommandId == cmcc.CMPP_SUBMIT_RESP {
 		csr := &cmcc.SubmitResp{}
 		err := csr.Decode(header, bytes)
 		if err != nil {
-			log.Errorf("%v", err)
+			t.Errorf("%v", err)
 			return false
 		} else {
 			atomic.AddInt64(&counterMt, 1)
@@ -133,7 +134,7 @@ func readResp(t *testing.T, c net.Conn) bool {
 		ats := at.ToResponse()
 		_, err = c.Write(ats.Encode())
 		if err != nil {
-			log.Errorf("%v", err)
+			t.Errorf("%v", err)
 			return false
 		} else {
 			atomic.AddInt64(&counterAt, 1)

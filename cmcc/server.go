@@ -40,7 +40,7 @@ func main() {
 		window:           make(chan struct{}, cmcc.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
-	log.Infof("server exits with error: %v", err)
+	log.Errorf("server exits with error: %v", err)
 }
 
 type Server struct {
@@ -72,7 +72,11 @@ func (s *Server) OnShutdown(eng gnet.Engine) {
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 	if s.countConn() >= cmcc.Conf.MaxCons {
-		log.Warnf("[%-9s] [%v<->%v] threshold reached, closing the connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
+		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：connections threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
+		return nil, gnet.Close
+	} else if len(s.window) == cmcc.Conf.ReceiveWindowSize {
+		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：receive window threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
+		// 已达到窗口时，拒绝新的连接
 		return nil, gnet.Close
 	} else {
 		log.Infof("[%-9s] [%v<->%v] activeCons=%d.", "OnOpen", c.RemoteAddr(), c.LocalAddr(), s.activeCons())
@@ -93,6 +97,10 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	if header == nil {
 		log.Warnf("[%-9s] [%v<->%v] decode error, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
 		return gnet.Close
+	}
+	action = checkReceiveWindow(s, c, header)
+	if action == gnet.Close {
+		return action
 	}
 
 	switch header.CommandId {
@@ -264,6 +272,31 @@ func getHeader(c gnet.Conn) *cmcc.MessageHeader {
 		return nil
 	}
 	return &header
+}
+
+func checkReceiveWindow(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
+	if len(s.window) == cmcc.Conf.ReceiveWindowSize && header.CommandId == cmcc.CMPP_SUBMIT {
+		log.Infof("[%-9s] FLOW CONTROL：receive window threshold reached.", "OnTraffic")
+		l := int(header.TotalLength - cmcc.HEAD_LENGTH)
+		discard, err := c.Discard(l)
+		if err != nil || discard != l {
+			return gnet.Close
+		}
+		sub := &cmcc.Submit{}
+		sub.MessageHeader = header
+		resp := sub.ToResponse(8)
+		// 发送响应
+		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
+			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
+			return nil
+		})
+		if err != nil {
+			log.Errorf("[%-9s] CMPP_SUBMIT_RESP ERROR: %v", "OnTraffic", err)
+			return gnet.Close
+		}
+		header.CommandId = 0
+	}
+	return gnet.None
 }
 
 // 消费一定字节数的数据

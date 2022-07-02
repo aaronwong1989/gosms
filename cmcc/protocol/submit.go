@@ -253,7 +253,9 @@ func (sub *Submit) ToResponse(result uint32) *SubmitResp {
 	resp.MessageHeader = &header
 	resp.CommandId = CMPP_SUBMIT_RESP
 	resp.TotalLength = HEAD_LENGTH + 12
-	resp.msgId = uint64(Sequence64.NextVal())
+	if result == 0 {
+		resp.msgId = uint64(Sequence64.NextVal())
+	}
 	resp.result = result
 	return resp
 }
