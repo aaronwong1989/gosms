@@ -1,3 +1,4 @@
+### 网关参数 ###
 # 目前仅支持模拟单一 SpId
 sp-id: "123456"
 sharedSecret: "shared secret"
@@ -6,13 +7,14 @@ max-cons: 3
 active-test-duration: 60s
 datacenter-id: 0
 worker-id: 0
-receive-window-size: 128
+receive-window-size: 512
 
-# 以下为MT发送相关
+### 以下为MT发送相关参数 ###
 sms-display-no: 95566
 need-report: 1
 default-msg-level: 9
-service-id: zy0dzdx1
+service-id: myService
+# 短信默认有效期，超过2h后消息不会再发给用户
 default-valid-duration: 2h
 fee-user-type: 2
 fee-terminal-type:
@@ -21,11 +23,11 @@ fee-type: 05
 fee-code: free
 link-id:
 
-# 以下是模拟网关运行情况的参数 #
+### 以下是模拟网关运行情况的参数 ###
 # 成功率：
 # 95  表示 95%
 # 99  表示 99%
 # 999 表示 99.9%
-success-rate: 99
+success-rate: 999
 min-submit-resp-ms: 1
-max-submit-resp-ms: 10
+max-submit-resp-ms: 3

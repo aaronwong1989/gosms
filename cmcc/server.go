@@ -39,8 +39,9 @@ func main() {
 		connectedSockets: make(map[string]gnet.Conn),
 		window:           make(chan struct{}, cmcc.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
+	log.Warnf("server(%s://%s) stating....", ss.protocol, ss.address)
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
-	log.Errorf("server exits with error: %v", err)
+	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
 }
 
 type Server struct {
