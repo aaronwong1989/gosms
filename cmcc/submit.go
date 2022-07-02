@@ -71,7 +71,7 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 	submit := &Submit{MessageHeader: header}
 
 	setOptions(submit, options)
-	setMsgFmt(content, submit)
+	submit.msgFmt = MsgFmt(content)
 
 	submit.destUsrTl = uint8(len(phones))
 	submit.destTerminalId = strings.Join(phones, ",")
@@ -84,7 +84,7 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 	submit.msgSrc = Conf.SourceAddr
 
 	submit.msgContent = content
-	slices := msgSlices(submit.msgFmt, content)
+	slices := MsgSlices(submit.msgFmt, content)
 
 	if len(slices) == 1 {
 		submit.pkTotal = 1
@@ -260,6 +260,27 @@ func (sub *Submit) ToResponse(result uint32) *SubmitResp {
 	return resp
 }
 
+func (sub *Submit) ToDeliveryReport() *Delivery {
+	d := Delivery{}
+
+	head := *sub.MessageHeader
+	head.TotalLength = 169
+	head.CommandId = CMPP_DELIVER
+	d.MessageHeader = &head
+
+	d.destId = sub.srcId
+	d.serviceId = sub.serviceId
+	d.srcTerminalId = sub.destTerminalId
+	d.srcTerminalType = sub.destTerminalType
+
+	subTime := time.Now().Format("0601021504")
+	doneTime := time.Now().Add(10 * time.Second).Format("0601021504")
+	report := NewReport(sub.msgId, sub.destTerminalId, subTime, doneTime)
+	d.report = report
+
+	return &d
+}
+
 func (resp *SubmitResp) Encode() []byte {
 	frame := resp.MessageHeader.Encode()
 	binary.BigEndian.PutUint64(frame[12:20], resp.msgId)
@@ -277,7 +298,7 @@ func (resp *SubmitResp) Decode(header *MessageHeader, frame []byte) error {
 	return nil
 }
 
-func msgSlices(fmt uint8, content string) (slices [][]byte) {
+func MsgSlices(fmt uint8, content string) (slices [][]byte) {
 	var msgBytes []byte
 	// 含中文
 	if fmt == 8 {
@@ -353,15 +374,18 @@ func ucs2Decode(ucs2 []byte) string {
 	return TrimStr(bts)
 }
 
-// 通过消息内容判断，设置编码格式。
+// MsgFmt 通过消息内容判断，设置编码格式。
 // 如果是纯拉丁字符采用0：ASCII串
 // 如果含多字节字符，这采用8：UCS-2编码
-func setMsgFmt(content string, submit *Submit) {
+func MsgFmt(content string) uint8 {
+	if len(content) < 2 {
+		return 0
+	}
 	all7bits := len(content) == len([]rune(content))
 	if all7bits {
-		submit.msgFmt = 0
+		return 0
 	} else {
-		submit.msgFmt = 8
+		return 8
 	}
 }
 

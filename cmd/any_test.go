@@ -10,4 +10,8 @@ func TestAnything(t *testing.T) {
 	s2 := sl[5:10]
 	t.Logf("s1: %x", s1)
 	t.Logf("s2: %x", s2)
+
+	s2 = make([]byte, 12)
+	copy(s2[10:12], "")
+	t.Logf("%s", s2)
 }
