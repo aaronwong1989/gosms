@@ -15,7 +15,7 @@ import (
 	"github.com/panjf2000/gnet/v2/pkg/logging"
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 
-	cmcc "sms-vgateway/cmcc/protocol"
+	cmcc2 "sms-vgateway/cmcc"
 )
 
 var log = logging.GetDefaultLogger()
@@ -37,7 +37,7 @@ func main() {
 		multicore:        multicore,
 		pool:             pool,
 		connectedSockets: make(map[string]gnet.Conn),
-		window:           make(chan struct{}, cmcc.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
+		window:           make(chan struct{}, cmcc2.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
@@ -71,10 +71,10 @@ func (s *Server) OnShutdown(eng gnet.Engine) {
 }
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	if s.countConn() >= cmcc.Conf.MaxCons {
+	if s.countConn() >= cmcc2.Conf.MaxCons {
 		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：connections threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		return nil, gnet.Close
-	} else if len(s.window) == cmcc.Conf.ReceiveWindowSize {
+	} else if len(s.window) == cmcc2.Conf.ReceiveWindowSize {
 		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：receive window threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		// 已达到窗口时，拒绝新的连接
 		return nil, gnet.Close
@@ -104,20 +104,20 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	}
 
 	switch header.CommandId {
-	case cmcc.CMPP_CONNECT:
+	case cmcc2.CMPP_CONNECT:
 		return handleConnect(s, c, header)
-	case cmcc.CMPP_CONNECT_RESP:
-	case cmcc.CMPP_SUBMIT:
+	case cmcc2.CMPP_CONNECT_RESP:
+	case cmcc2.CMPP_SUBMIT:
 		return handleSubmit(s, c, header)
-	case cmcc.CMPP_SUBMIT_RESP:
-	case cmcc.CMPP_DELIVER:
-	case cmcc.CMPP_DELIVER_RESP:
-	case cmcc.CMPP_ACTIVE_TEST:
+	case cmcc2.CMPP_SUBMIT_RESP:
+	case cmcc2.CMPP_DELIVER:
+	case cmcc2.CMPP_DELIVER_RESP:
+	case cmcc2.CMPP_ACTIVE_TEST:
 		return handActive(s, c, header)
-	case cmcc.CMPP_ACTIVE_TEST_RESP:
+	case cmcc2.CMPP_ACTIVE_TEST_RESP:
 		return handActiveResp(c, header)
-	case cmcc.CMPP_TERMINATE:
-	case cmcc.CMPP_TERMINATE_RESP:
+	case cmcc2.CMPP_TERMINATE:
+	case cmcc2.CMPP_TERMINATE_RESP:
 	}
 
 	return gnet.None
@@ -129,7 +129,7 @@ func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 	defer s.Unlock()
 	for addr, con := range s.connectedSockets {
 		_ = s.pool.Submit(func() {
-			at := cmcc.NewActiveTest()
+			at := cmcc2.NewActiveTest()
 			err := con.AsyncWrite(at.Encode(), nil)
 			if err == nil {
 				log.Infof("[%-9s] >>> %s to %s", "OnTick", at, addr)
@@ -138,7 +138,7 @@ func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 			}
 		})
 	}
-	return cmcc.Conf.ActiveTestDuration, gnet.None
+	return cmcc2.Conf.ActiveTestDuration, gnet.None
 }
 
 func (s *Server) countConn() int {
@@ -147,11 +147,11 @@ func (s *Server) countConn() int {
 	return len(s.connectedSockets)
 }
 
-func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
-	frame := take(c, 39-cmcc.HEAD_LENGTH)
+func handleConnect(s *Server, c gnet.Conn, header *cmcc2.MessageHeader) gnet.Action {
+	frame := take(c, 39-cmcc2.HEAD_LENGTH)
 	logHex(logging.DebugLevel, "Connect", frame)
 
-	connect := &cmcc.CmppConnect{}
+	connect := &cmcc2.CmppConnect{}
 	err := connect.Decode(header, frame)
 	if err != nil {
 		log.Errorf("[%-9s] CMPP_CONNECT ERROR: %v", "OnTraffic", err)
@@ -161,7 +161,7 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 	log.Infof("[%-9s] <<< %s", "OnTraffic", connect)
 	resp := connect.ToResponse()
 	if resp.Status != 0 {
-		log.Errorf("[%-9s] CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", "OnTraffic", resp.Status, cmcc.ConnectStatusMap[resp.Status])
+		log.Errorf("[%-9s] CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", "OnTraffic", resp.Status, cmcc2.ConnectStatusMap[resp.Status])
 	}
 
 	// send cmpp_connect_resp async
@@ -185,16 +185,16 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 	return gnet.None
 }
 
-func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
+func handleSubmit(s *Server, c gnet.Conn, header *cmcc2.MessageHeader) gnet.Action {
 	// check connect
 	if s.connectedSockets[c.RemoteAddr().String()] == nil {
 		log.Warnf("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
 		return gnet.Close
 	}
 
-	frame := take(c, int(header.TotalLength-cmcc.HEAD_LENGTH))
+	frame := take(c, int(header.TotalLength-cmcc2.HEAD_LENGTH))
 	logHex(logging.DebugLevel, "Submit", frame)
-	sub := &cmcc.Submit{}
+	sub := &cmcc2.Submit{}
 	err := sub.Decode(header, frame)
 	if err != nil {
 		log.Errorf("[%-9s] CMPP_SUBMIT ERROR: %v", "OnTraffic", err)
@@ -212,11 +212,11 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 		// TODO 上述实现方式可以控制返回消息的速率，但如果发送方不按照协议控制速度，会导致线程池中的任务越来越多
 
 		// 模拟消息处理耗时，可配置
-		processTime := time.Duration(randNum(cmcc.Conf.MinSubmitRespMs, cmcc.Conf.MaxSubmitRespMs))
+		processTime := time.Duration(randNum(cmcc2.Conf.MinSubmitRespMs, cmcc2.Conf.MaxSubmitRespMs))
 		time.Sleep(processTime * time.Millisecond)
 
 		rtCode := uint32(0)
-		if sub.SequenceId%cmcc.Conf.SuccessRate == 0 {
+		if sub.SequenceId%cmcc2.Conf.SuccessRate == 0 {
 			// 失败消息的返回码
 			rtCode = 13
 		}
@@ -234,9 +234,9 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 	return gnet.None
 }
 
-func handActive(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
-	respHeader := &cmcc.MessageHeader{TotalLength: cmcc.HEAD_LENGTH, CommandId: cmcc.CMPP_ACTIVE_TEST_RESP, SequenceId: header.SequenceId}
-	resp := &cmcc.ActiveTestResp{MessageHeader: respHeader}
+func handActive(s *Server, c gnet.Conn, header *cmcc2.MessageHeader) (action gnet.Action) {
+	respHeader := &cmcc2.MessageHeader{TotalLength: cmcc2.HEAD_LENGTH, CommandId: cmcc2.CMPP_ACTIVE_TEST_RESP, SequenceId: header.SequenceId}
+	resp := &cmcc2.ActiveTestResp{MessageHeader: respHeader}
 	// send cmpp_active_resp async
 	_ = s.pool.Submit(func() {
 		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
@@ -250,22 +250,22 @@ func handActive(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet
 	return gnet.None
 }
 
-func handActiveResp(c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
+func handActiveResp(c gnet.Conn, header *cmcc2.MessageHeader) (action gnet.Action) {
 	if c.InboundBuffered() >= 1 {
 		_, _ = c.Discard(1)
 	}
-	log.Infof("[%-9s] <<< %s from %s", "OnTraffic", &cmcc.ActiveTestResp{MessageHeader: header}, c.RemoteAddr())
+	log.Infof("[%-9s] <<< %s from %s", "OnTraffic", &cmcc2.ActiveTestResp{MessageHeader: header}, c.RemoteAddr())
 	return gnet.None
 }
 
-func getHeader(c gnet.Conn) *cmcc.MessageHeader {
-	frame := take(c, cmcc.HEAD_LENGTH)
+func getHeader(c gnet.Conn) *cmcc2.MessageHeader {
+	frame := take(c, cmcc2.HEAD_LENGTH)
 	if frame == nil {
 		return nil
 	}
 	logHex(logging.DebugLevel, "Header", frame)
 
-	header := cmcc.MessageHeader{}
+	header := cmcc2.MessageHeader{}
 	err := header.Decode(frame)
 	if err != nil {
 		log.Errorf("[%-9s] decode error: %v", "OnTraffic", err)
@@ -274,15 +274,15 @@ func getHeader(c gnet.Conn) *cmcc.MessageHeader {
 	return &header
 }
 
-func checkReceiveWindow(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
-	if len(s.window) == cmcc.Conf.ReceiveWindowSize && header.CommandId == cmcc.CMPP_SUBMIT {
+func checkReceiveWindow(s *Server, c gnet.Conn, header *cmcc2.MessageHeader) gnet.Action {
+	if len(s.window) == cmcc2.Conf.ReceiveWindowSize && header.CommandId == cmcc2.CMPP_SUBMIT {
 		log.Warnf("[%-9s] FLOW CONTROL：receive window threshold reached.", "OnTraffic")
-		l := int(header.TotalLength - cmcc.HEAD_LENGTH)
+		l := int(header.TotalLength - cmcc2.HEAD_LENGTH)
 		discard, err := c.Discard(l)
 		if err != nil || discard != l {
 			return gnet.Close
 		}
-		sub := &cmcc.Submit{}
+		sub := &cmcc2.Submit{}
 		sub.MessageHeader = header
 		resp := sub.ToResponse(8)
 		// 发送响应

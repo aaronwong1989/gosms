@@ -14,7 +14,7 @@ import (
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 	"github.com/stretchr/testify/assert"
 
-	cmcc "sms-vgateway/cmcc/protocol"
+	cmcc2 "sms-vgateway/cmcc"
 )
 
 var pool = goroutine.Default()
@@ -95,7 +95,7 @@ func runClient(t *testing.T, senders, receivers int) {
 }
 
 func login(t *testing.T, c net.Conn) bool {
-	con := cmcc.NewConnect()
+	con := cmcc2.NewConnect()
 	// con.authenticatorSource = "000000" // 反例测试
 	t.Logf(">>>: %s", con)
 	i, _ := c.Write(con.Encode())
@@ -104,13 +104,13 @@ func login(t *testing.T, c net.Conn) bool {
 	i, _ = c.Read(resp)
 	assert.True(t, i == 33)
 
-	header := &cmcc.MessageHeader{}
+	header := &cmcc2.MessageHeader{}
 	err := header.Decode(resp)
 	if err != nil {
 		return false
 	}
-	rep := &cmcc.CmppConnectResp{}
-	err = rep.Decode(header, resp[cmcc.HEAD_LENGTH:])
+	rep := &cmcc2.CmppConnectResp{}
+	err = rep.Decode(header, resp[cmcc2.HEAD_LENGTH:])
 	if err != nil {
 		return false
 	}
@@ -119,7 +119,7 @@ func login(t *testing.T, c net.Conn) bool {
 }
 
 func sendMt(t *testing.T, c net.Conn) bool {
-	mts := cmcc.NewSubmit([]string{"13100001111"}, fmt.Sprintf("hello world! %d", rand.Uint64()))
+	mts := cmcc2.NewSubmit([]string{"13100001111"}, fmt.Sprintf("hello world! %d", rand.Uint64()))
 	mt := mts[0]
 	_, err := c.Write(mt.Encode())
 	if err != nil {
@@ -137,7 +137,7 @@ func readResp(t *testing.T, c net.Conn) bool {
 		t.Errorf("%v", err)
 		return false
 	}
-	header := &cmcc.MessageHeader{}
+	header := &cmcc2.MessageHeader{}
 	_ = header.Decode(bytes)
 	l := int(header.TotalLength - 12)
 	bytes = make([]byte, l)
@@ -146,8 +146,8 @@ func readResp(t *testing.T, c net.Conn) bool {
 		t.Errorf("%v", err)
 		return false
 	}
-	if header.CommandId == cmcc.CMPP_SUBMIT_RESP {
-		csr := &cmcc.SubmitResp{}
+	if header.CommandId == cmcc2.CMPP_SUBMIT_RESP {
+		csr := &cmcc2.SubmitResp{}
 		err := csr.Decode(header, bytes)
 		if err != nil {
 			t.Errorf("%v", err)
@@ -156,8 +156,8 @@ func readResp(t *testing.T, c net.Conn) bool {
 			atomic.AddInt64(&counterMt, 1)
 			t.Logf("<<< %s", csr)
 		}
-	} else if header.CommandId == cmcc.CMPP_ACTIVE_TEST {
-		at := cmcc.ActiveTest{MessageHeader: header}
+	} else if header.CommandId == cmcc2.CMPP_ACTIVE_TEST {
+		at := cmcc2.ActiveTest{MessageHeader: header}
 		t.Logf("<<< %s", at)
 		ats := at.ToResponse()
 		_, err = c.Write(ats.Encode())
