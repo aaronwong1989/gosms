@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -28,22 +29,31 @@ func TestClient(t *testing.T) {
 	receivers := 1
 	wg.Add(1)
 
+	for i := 0; i < clients; i++ {
+		runClient(t, senders, receivers)
+	}
+	time.Sleep(duration)
+	logResult(t)
+
 	defer func() {
 		pool.Release()
 		wg.Done()
 	}()
+}
 
-	for i := 0; i < clients; i++ {
-		runClient(t, senders, receivers)
-	}
-
-	time.Sleep(duration)
-	result := fmt.Sprintf("%s CounterMt=%d, CounterAt=%d", time.Now().Format("2006-01-02T15:03:04.000"), counterMt, counterAt)
+func logResult(t *testing.T) {
+	result := fmt.Sprintf("%s CounterMt=%d, CounterAt=%d\n", time.Now().Format("2006-01-02T15:03:04.000"), counterMt, counterAt)
 	t.Logf(result)
-	err := ioutil.WriteFile("./test.result.txt", []byte(result), 0644)
+	file, err := os.OpenFile("./test.result.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
+	writer := bufio.NewWriter(file)
+	_, _ = writer.WriteString(result)
+	defer func(file *os.File, writer *bufio.Writer) {
+		_ = writer.Flush()
+		_ = file.Close()
+	}(file, writer)
 }
 
 func runClient(t *testing.T, senders, receivers int) {
