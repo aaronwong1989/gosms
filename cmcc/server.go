@@ -62,20 +62,20 @@ func (s *Server) OnBoot(eng gnet.Engine) (action gnet.Action) {
 }
 
 func (s *Server) OnShutdown(eng gnet.Engine) {
-	log.Infof("[%-9s] shutdown server %s ...", "OnShutdown", fmt.Sprintf("%s://%s", s.protocol, s.address))
+	log.Warnf("[%-9s] shutdown server %s ...", "OnShutdown", fmt.Sprintf("%s://%s", s.protocol, s.address))
 	for eng.CountConnections() > 0 {
-		log.Infof("[%-9s] active connections is %d, waiting...", eng.CountConnections())
+		log.Warnf("[%-9s] active connections is %d, waiting...", eng.CountConnections())
 		time.Sleep(10 * time.Millisecond)
 	}
-	log.Infof("[%-9s] shutdown server %s completed!", "OnShutdown", fmt.Sprintf("%s://%s", s.protocol, s.address))
+	log.Warnf("[%-9s] shutdown server %s completed!", "OnShutdown", fmt.Sprintf("%s://%s", s.protocol, s.address))
 }
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 	if s.countConn() >= cmcc.Conf.MaxCons {
-		log.Infof("[%-9s] [%v<->%v] FLOW CONTROL：connections threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
+		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：connections threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		return nil, gnet.Close
 	} else if len(s.window) == cmcc.Conf.ReceiveWindowSize {
-		log.Infof("[%-9s] [%v<->%v] FLOW CONTROL：receive window threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
+		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：receive window threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		// 已达到窗口时，拒绝新的连接
 		return nil, gnet.Close
 	} else {
@@ -85,7 +85,7 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 }
 
 func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
-	log.Infof("[%-9s] [%v<->%v] activeCons=%d, reason=%v.", "OnClose", c.RemoteAddr(), c.LocalAddr(), s.activeCons(), e)
+	log.Warnf("[%-9s] [%v<->%v] activeCons=%d, reason=%v.", "OnClose", c.RemoteAddr(), c.LocalAddr(), s.activeCons(), e)
 	s.Lock()
 	defer s.Unlock()
 	delete(s.connectedSockets, c.RemoteAddr().String())
@@ -95,7 +95,7 @@ func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
 func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	header := getHeader(c)
 	if header == nil {
-		log.Infof("[%-9s] [%v<->%v] decode error, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
+		log.Warnf("[%-9s] [%v<->%v] decode error, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
 		return gnet.Close
 	}
 	action = checkReceiveWindow(s, c, header)
@@ -188,7 +188,7 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
 	// check connect
 	if s.connectedSockets[c.RemoteAddr().String()] == nil {
-		log.Infof("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
+		log.Warnf("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
 		return gnet.Close
 	}
 
@@ -276,7 +276,7 @@ func getHeader(c gnet.Conn) *cmcc.MessageHeader {
 
 func checkReceiveWindow(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
 	if len(s.window) == cmcc.Conf.ReceiveWindowSize && header.CommandId == cmcc.CMPP_SUBMIT {
-		log.Infof("[%-9s] FLOW CONTROL：receive window threshold reached.", "OnTraffic")
+		log.Warnf("[%-9s] FLOW CONTROL：receive window threshold reached.", "OnTraffic")
 		l := int(header.TotalLength - cmcc.HEAD_LENGTH)
 		discard, err := c.Discard(l)
 		if err != nil || discard != l {

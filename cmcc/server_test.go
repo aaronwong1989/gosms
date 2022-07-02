@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"sync"
@@ -18,7 +19,7 @@ import (
 var pool = goroutine.Default()
 var counterMt int64
 var counterAt int64
-var duration = time.Minute
+var duration = time.Second * 10
 var wg sync.WaitGroup
 
 func TestClient(t *testing.T) {
@@ -37,7 +38,12 @@ func TestClient(t *testing.T) {
 	}
 
 	time.Sleep(duration)
-	t.Logf("###### counterMt=%d, counterAt=%d ######", counterMt, counterAt)
+	result := fmt.Sprintf("%s CounterMt=%d, CounterAt=%d", time.Now().Format("2006-01-02T15:03:04.000"), counterMt, counterAt)
+	t.Logf(result)
+	err := ioutil.WriteFile("./test.result.txt", []byte(result), 0644)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
 }
 
 func runClient(t *testing.T, senders, receivers int) {
