@@ -14,14 +14,14 @@ sms-display-no: 95566
 need-report: 1
 default-msg-level: 9
 service-id: myService
-# 短信默认有效期，超过2h后消息不会再发给用户
-default-valid-duration: 2h
 fee-user-type: 2
 fee-terminal-type:
 fee-terminal-id:
 fee-type: 05
 fee-code: free
 link-id:
+# 短信默认有效期，超过下面配置时长后，如果消息未发送，则不再发送
+default-valid-duration: 2h
 
 ### 以下是模拟网关运行情况的参数 ###
 # 成功率：
