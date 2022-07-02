@@ -70,7 +70,9 @@ func runClient(t *testing.T, senders, receivers int) {
 			}
 		}(c)
 
-		login(t, c)
+		if !login(t, c) {
+			return
+		}
 		time.Sleep(time.Millisecond * 10)
 
 		for i := 0; i < senders; i++ {
@@ -92,7 +94,7 @@ func runClient(t *testing.T, senders, receivers int) {
 	}(t)
 }
 
-func login(t *testing.T, c net.Conn) {
+func login(t *testing.T, c net.Conn) bool {
 	con := cmcc.NewConnect()
 	// con.authenticatorSource = "000000" // 反例测试
 	t.Logf(">>>: %s", con)
@@ -105,15 +107,15 @@ func login(t *testing.T, c net.Conn) {
 	header := &cmcc.MessageHeader{}
 	err := header.Decode(resp)
 	if err != nil {
-		return
+		return false
 	}
 	rep := &cmcc.CmppConnectResp{}
 	err = rep.Decode(header, resp[cmcc.HEAD_LENGTH:])
 	if err != nil {
-		return
+		return false
 	}
 	t.Logf("<<<: %s", rep)
-	assert.True(t, 0 == rep.Status)
+	return 0 == rep.Status
 }
 
 func sendMt(t *testing.T, c net.Conn) bool {
