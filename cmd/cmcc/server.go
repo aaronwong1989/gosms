@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
+	"strconv"
 	"sync"
 	"time"
 
@@ -23,18 +24,15 @@ import (
 var log = logging.GetDefaultLogger()
 
 func main() {
-	startMonitor()
-
 	var port int
 	var multicore bool
-
 	// Example command: go run server.go --port 9000 --multicore=true
 	flag.IntVar(&port, "port", 9000, "--port 9000")
 	flag.BoolVar(&multicore, "multicore", true, "--multicore=true")
 	flag.Parse()
+
 	pool := goroutine.Default()
 	defer pool.Release()
-
 	ss := &Server{
 		protocol:         "tcp",
 		address:          fmt.Sprintf(":%d", port),
@@ -43,17 +41,20 @@ func main() {
 		connectedSockets: make(map[string]gnet.Conn),
 		window:           make(chan struct{}, cmcc.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
+
+	startMonitor(port)
+
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
 }
 
 // 开启pprof，监听请求
-func startMonitor() {
+func startMonitor(port int) {
 	go func() {
-		addr := ":9001"
-		log.Infof("debug pprof @ http://%s/debug/pprof/", addr)
+		addr := strconv.Itoa(port + 1)
+		log.Infof("[pprof   ] http://localhost:%d/debug/pprof/", addr)
 		if err := http.ListenAndServe(addr, nil); err != nil {
-			fmt.Printf("start pprof failed on %s\n", addr)
+			log.Infof("start pprof failed on %s", addr)
 		}
 	}()
 }
