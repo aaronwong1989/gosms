@@ -24,9 +24,26 @@ var (
 	counterAt int64
 	wg        sync.WaitGroup
 
-	clients  = 1
-	duration = time.Second * 10
+	clients  = 2
+	duration = time.Second * 500
 )
+
+func TestClient(t *testing.T) {
+	senders := 1
+	receivers := 1
+	wg.Add(1)
+
+	for i := 0; i < clients; i++ {
+		runClient(t, senders, receivers)
+	}
+	time.Sleep(duration)
+	logResult(t)
+
+	defer func() {
+		pool.Release()
+		wg.Done()
+	}()
+}
 
 func TestServer_handleTerminate(t *testing.T) {
 	c, err := net.Dial("tcp", ":9000")
@@ -46,23 +63,6 @@ func TestServer_handleTerminate(t *testing.T) {
 	}
 
 	terminate(t, c)
-}
-
-func TestClient(t *testing.T) {
-	senders := 1
-	receivers := 1
-	wg.Add(1)
-
-	for i := 0; i < clients; i++ {
-		runClient(t, senders, receivers)
-	}
-	time.Sleep(duration)
-	logResult(t)
-
-	defer func() {
-		pool.Release()
-		wg.Done()
-	}()
 }
 
 func runClient(t *testing.T, senders, receivers int) {
