@@ -14,7 +14,7 @@ func TestMessageHeader_Encode(t *testing.T) {
 	t.Logf("%s", header.String())
 	t.Logf("%d", header.Encode())
 
-	connect := CmppConnect{MessageHeader: &header}
+	connect := Connect{MessageHeader: &header}
 
 	connect.Encode()
 }

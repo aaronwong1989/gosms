@@ -3,6 +3,7 @@ package cmcc
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
 )
 
 // Delivery 上行短信或状态报告，不支持长短信
@@ -108,10 +109,23 @@ func (d *Delivery) Decode(header *MessageHeader, frame []byte) error {
 	return nil
 }
 
+func (d *Delivery) ToResponse(code uint32) interface{} {
+	header := *d.MessageHeader
+	dr := &DeliveryResp{}
+	dr.TotalLength = HEAD_LENGTH + 12
+	dr.CommandId = CMPP_DELIVER_RESP
+	dr.MessageHeader = &header
+	dr.msgId = d.msgId
+	dr.result = code
+	return dr
+}
+
 func (d *Delivery) String() string {
-	content := d.msgContent
+	var content string
 	if d.registeredDelivery == 1 {
 		content = d.report.String()
+	} else {
+		content = strings.ReplaceAll(d.msgContent, "\n", " ")
 	}
 
 	return fmt.Sprintf("{ msgId: %d, destId: %v, serviceId: %v, tpPid: %d, tpUdhi: %d, msgFmt: %d, "+
@@ -144,4 +158,43 @@ func setMsgContent(dly *Delivery, msg string) {
 	}
 	dly.msgLength = uint8(l)
 	dly.msgContent = msg
+}
+
+type DeliveryResp struct {
+	*MessageHeader
+	msgId  uint64 // 消息标识,来自CMPP_DELIVERY
+	result uint32 // 结果
+}
+
+func (r *DeliveryResp) Encode() []byte {
+	frame := r.MessageHeader.Encode()
+	binary.BigEndian.PutUint64(frame[12:20], r.msgId)
+	binary.BigEndian.PutUint32(frame[20:24], r.result)
+	return frame
+}
+
+func (r *DeliveryResp) Decode(header *MessageHeader, frame []byte) error {
+	if header == nil || header.CommandId != CMPP_DELIVER_RESP || uint32(len(frame)) < (header.TotalLength-HEAD_LENGTH) {
+		return ErrorPacket
+	}
+	r.msgId = binary.BigEndian.Uint64(frame[0:8])
+	r.result = binary.BigEndian.Uint32(frame[8:12])
+	return nil
+}
+
+func (r *DeliveryResp) GoString() string {
+	return fmt.Sprintf("{ header: %v, msgId: %d, result: {%d: %s} }", r.MessageHeader, r.msgId, r.result, DeliveryResultMap[r.result])
+}
+
+var DeliveryResultMap = map[uint32]string{
+	0: "正确",
+	1: "消息结构错",
+	2: "命令字错",
+	3: "消息序号重复",
+	4: "消息长度错",
+	5: "资费代码错",
+	6: "超过最大信息长",
+	7: "业务代码错",
+	8: "流量控制错",
+	9: "未知错误",
 }

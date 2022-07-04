@@ -109,7 +109,7 @@ func login(t *testing.T, c net.Conn) bool {
 	if err != nil {
 		return false
 	}
-	rep := &cmcc.CmppConnectResp{}
+	rep := &cmcc.ConnectResp{}
 	err = rep.Decode(header, resp[cmcc.HEAD_LENGTH:])
 	if err != nil {
 		return false
@@ -159,7 +159,7 @@ func readResp(t *testing.T, c net.Conn) bool {
 	} else if header.CommandId == cmcc.CMPP_ACTIVE_TEST {
 		at := cmcc.ActiveTest{MessageHeader: header}
 		t.Logf("<<< %s", at)
-		ats := at.ToResponse()
+		ats := at.ToResponse(0).(*cmcc.ActiveTestResp)
 		_, err = c.Write(ats.Encode())
 		if err != nil {
 			t.Errorf("%v", err)

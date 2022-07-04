@@ -247,7 +247,7 @@ type SubmitResp struct {
 	result uint32
 }
 
-func (sub *Submit) ToResponse(result uint32) *SubmitResp {
+func (sub *Submit) ToResponse(result uint32) interface{} {
 	resp := &SubmitResp{}
 	header := *sub.MessageHeader
 	resp.MessageHeader = &header

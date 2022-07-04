@@ -13,7 +13,7 @@ func TestCmppConnect_Encode(t *testing.T) {
 		SequenceId:  uint32(Sequence32.NextVal()),
 	}
 
-	connect := &CmppConnect{MessageHeader: &header}
+	connect := &Connect{MessageHeader: &header}
 	connect.sourceAddr = "123456"
 	connect.version = 0x30
 	connect.timestamp = uint32(1001235010)
@@ -22,7 +22,7 @@ func TestCmppConnect_Encode(t *testing.T) {
 	t.Logf("%s", connect)
 
 	frame := connect.Encode()
-	t.Logf("CmppConnect: %x", frame)
+	t.Logf("Connect: %x", frame)
 }
 
 func TestTime(t *testing.T) {

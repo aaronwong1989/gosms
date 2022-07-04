@@ -17,13 +17,18 @@ func (at *ActiveTest) Encode() []byte {
 	return at.MessageHeader.Encode()
 }
 
-func (at *ActiveTest) Decode(frame []byte) error {
-	return at.MessageHeader.Decode(frame)
+func (at *ActiveTest) Decode(header *MessageHeader, frame []byte) error {
+	if header == nil || header.CommandId != CMPP_ACTIVE_TEST || frame != nil {
+		return ErrorPacket
+	}
+	at.MessageHeader = header
+	return nil
 }
 
-func (at *ActiveTest) ToResponse() *ActiveTestResp {
+func (at *ActiveTest) ToResponse(code uint32) interface{} {
 	header := &MessageHeader{TotalLength: HEAD_LENGTH + 1, CommandId: CMPP_ACTIVE_TEST_RESP, SequenceId: at.SequenceId}
-	return &ActiveTestResp{MessageHeader: header, reserved: 0}
+	atr := ActiveTestResp{MessageHeader: header, reserved: byte(code)}
+	return &atr
 }
 
 func (at *ActiveTest) String() string {
@@ -39,8 +44,13 @@ func (at *ActiveTestResp) Encode() []byte {
 	return at.MessageHeader.Encode()
 }
 
-func (at *ActiveTestResp) Decode(frame []byte) error {
-	return at.MessageHeader.Decode(frame)
+func (at *ActiveTestResp) Decode(header *MessageHeader, frame []byte) error {
+	if header == nil || header.CommandId != CMPP_ACTIVE_TEST_RESP || len(frame) < (13-HEAD_LENGTH) {
+		return ErrorPacket
+	}
+	at.MessageHeader = header
+	at.reserved = frame[0]
+	return nil
 }
 
 func (at *ActiveTestResp) String() string {

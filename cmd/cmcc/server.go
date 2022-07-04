@@ -107,11 +107,15 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	case cmcc.CMPP_CONNECT:
 		return handleConnect(s, c, header)
 	case cmcc.CMPP_CONNECT_RESP:
+		return gnet.None
 	case cmcc.CMPP_SUBMIT:
 		return handleSubmit(s, c, header)
 	case cmcc.CMPP_SUBMIT_RESP:
+		return gnet.None
 	case cmcc.CMPP_DELIVER:
+		return handleDelivery(s, c, header)
 	case cmcc.CMPP_DELIVER_RESP:
+		return gnet.None
 	case cmcc.CMPP_ACTIVE_TEST:
 		return handActive(s, c, header)
 	case cmcc.CMPP_ACTIVE_TEST_RESP:
@@ -151,7 +155,7 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 	frame := take(c, 39-cmcc.HEAD_LENGTH)
 	logHex(logging.DebugLevel, "Connect", frame)
 
-	connect := &cmcc.CmppConnect{}
+	connect := &cmcc.Connect{}
 	err := connect.Decode(header, frame)
 	if err != nil {
 		log.Errorf("[%-9s] CMPP_CONNECT ERROR: %v", "OnTraffic", err)
@@ -159,7 +163,7 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 	}
 
 	log.Infof("[%-9s] <<< %s", "OnTraffic", connect)
-	resp := connect.ToResponse()
+	resp := connect.ToResponse(0).(*cmcc.ConnectResp)
 	if resp.Status != 0 {
 		log.Errorf("[%-9s] CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", "OnTraffic", resp.Status, cmcc.ConnectStatusMap[resp.Status])
 	}
@@ -180,6 +184,46 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 		})
 		if err != nil {
 			log.Errorf("[%-9s] CMPP_CONNECT_RESP ERROR: %v", "OnTraffic", err)
+		}
+	})
+	return gnet.None
+}
+
+func handleDelivery(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
+	// check connect
+	if s.connectedSockets[c.RemoteAddr().String()] == nil {
+		log.Warnf("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
+		return gnet.Close
+	}
+
+	frame := take(c, int(header.TotalLength-cmcc.HEAD_LENGTH))
+	logHex(logging.DebugLevel, "Delivery", frame)
+	dly := &cmcc.Delivery{}
+	err := dly.Decode(header, frame)
+	if err != nil {
+		log.Errorf("[%-9s] CMPP_DELIVERY ERROR: %v", "OnTraffic", err)
+		return gnet.Close
+	}
+	log.Debugf("[%-9s] <<< %s", "OnTraffic", dly)
+	// handle message async
+	_ = s.pool.Submit(func() {
+		// 模拟消息处理耗时
+		processTime := time.Duration(rand.Intn(5))
+		time.Sleep(processTime * time.Millisecond)
+
+		rtCode := uint32(0)
+		if dly.SequenceId%cmcc.Conf.SuccessRate == 0 {
+			// 失败消息的返回码
+			rtCode = 9
+		}
+		resp := dly.ToResponse(rtCode).(*cmcc.DeliveryResp)
+		// 发送响应
+		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
+			log.Debugf("[%-9s] >>> %s", "OnTraffic", resp)
+			return nil
+		})
+		if err != nil {
+			log.Errorf("[%-9s] CMPP_DELIVERY_RESP ERROR: %v", "OnTraffic", err)
 		}
 	})
 	return gnet.None
@@ -209,7 +253,6 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 			// defer函数消费信号，确保每个消息的信号最终都会被消费
 			<-s.window
 		}()
-		// TODO 上述实现方式可以控制返回消息的速率，但如果发送方不按照协议控制速度，会导致线程池中的任务越来越多
 
 		// 模拟消息处理耗时，可配置
 		processTime := time.Duration(randNum(cmcc.Conf.MinSubmitRespMs, cmcc.Conf.MaxSubmitRespMs))
@@ -220,10 +263,9 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 			// 失败消息的返回码
 			rtCode = 13
 		}
-		resp := sub.ToResponse(rtCode)
-
+		resp := sub.ToResponse(rtCode).(*cmcc.SubmitResp)
 		// 发送响应
-		err = c.AsyncWrite(sub.ToResponse(rtCode).Encode(), func(c gnet.Conn) error {
+		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			log.Debugf("[%-9s] >>> %s", "OnTraffic", resp)
 			return nil
 		})
@@ -235,7 +277,7 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 }
 
 func handActive(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {
-	respHeader := &cmcc.MessageHeader{TotalLength: cmcc.HEAD_LENGTH, CommandId: cmcc.CMPP_ACTIVE_TEST_RESP, SequenceId: header.SequenceId}
+	respHeader := &cmcc.MessageHeader{TotalLength: 13, CommandId: cmcc.CMPP_ACTIVE_TEST_RESP, SequenceId: header.SequenceId}
 	resp := &cmcc.ActiveTestResp{MessageHeader: respHeader}
 	// send cmpp_active_resp async
 	_ = s.pool.Submit(func() {
@@ -284,7 +326,7 @@ func checkReceiveWindow(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet
 		}
 		sub := &cmcc.Submit{}
 		sub.MessageHeader = header
-		resp := sub.ToResponse(8)
+		resp := sub.ToResponse(8).(*cmcc.SubmitResp)
 		// 发送响应
 		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			log.Debugf("[%-9s] >>> %s", "OnTraffic", resp)

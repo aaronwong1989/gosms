@@ -116,10 +116,9 @@ func TestSubmit_Encode(t *testing.T) {
 	phones := []string{"17011112222"}
 	mts := NewSubmit(phones, Poem, MtAtTime(time.Now().Add(5*time.Minute)))
 
-	var resp *SubmitResp
 	for _, mt := range mts {
 		t.Logf("mt.String()  : %s", mt)
-		resp = mt.ToResponse(0)
+		resp := mt.ToResponse(0).(*SubmitResp)
 		t.Logf("resp.String(): %s", resp)
 
 		enc := mt.Encode()

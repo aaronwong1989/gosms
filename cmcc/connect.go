@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type CmppConnect struct {
+type Connect struct {
 	*MessageHeader             // +12 = 12：消息头
 	sourceAddr          string // +6 = 18：源地址，此处为 SP_Id
 	authenticatorSource string // +16 = 34： 用于鉴别源地址。其值通过单向 MD5 hash 计算得出，表示如下: authenticatorSource = MD5(Source_Addr+9 字节的 0 +shared secret+timestamp) Shared secret 由中国移动与源地址实 体事先商定，timestamp 格式为: MMDDHHMMSS，即月日时分秒，10 位。
@@ -17,8 +17,8 @@ type CmppConnect struct {
 	timestamp           uint32 // +4 = 39：时间戳的明文,由客户端产生,格式为 MMDDHHMMSS，即月日时分秒，10 位数字的整型，右对齐。
 }
 
-func NewConnect() *CmppConnect {
-	con := &CmppConnect{}
+func NewConnect() *Connect {
+	con := &Connect{}
 	header := &MessageHeader{}
 	header.TotalLength = 39
 	header.CommandId = CMPP_CONNECT
@@ -34,7 +34,7 @@ func NewConnect() *CmppConnect {
 	return con
 }
 
-func (connect *CmppConnect) Encode() []byte {
+func (connect *Connect) Encode() []byte {
 	frame := connect.MessageHeader.Encode()
 	if len(frame) == 39 && connect.TotalLength == 39 {
 		copy(frame[12:18], connect.sourceAddr)
@@ -45,7 +45,7 @@ func (connect *CmppConnect) Encode() []byte {
 	return frame
 }
 
-func (connect *CmppConnect) Decode(header *MessageHeader, frame []byte) error {
+func (connect *Connect) Decode(header *MessageHeader, frame []byte) error {
 	// check
 	if header == nil || header.CommandId != CMPP_CONNECT || len(frame) < (39-HEAD_LENGTH) {
 		return ErrorPacket
@@ -58,12 +58,12 @@ func (connect *CmppConnect) Decode(header *MessageHeader, frame []byte) error {
 	return nil
 }
 
-func (connect *CmppConnect) String() string {
+func (connect *Connect) String() string {
 	return fmt.Sprintf("{ Header: %s, sourceAddr: %s, authenticatorSource: %x, version: %x, timestamp: %v }",
 		connect.MessageHeader, connect.sourceAddr, connect.authenticatorSource, connect.version, connect.timestamp)
 }
 
-func (connect *CmppConnect) Check() uint32 {
+func (connect *Connect) Check() uint32 {
 	if connect.version > Conf.Version {
 		return 4
 	}
@@ -77,14 +77,18 @@ func (connect *CmppConnect) Check() uint32 {
 	return 3
 }
 
-func (connect *CmppConnect) ToResponse() *CmppConnectResp {
-	response := &CmppConnectResp{}
+func (connect *Connect) ToResponse(code uint32) interface{} {
+	response := &ConnectResp{}
 	header := &MessageHeader{}
 	header.TotalLength = 33
 	header.CommandId = CMPP_CONNECT_RESP
 	header.SequenceId = connect.SequenceId
 	response.MessageHeader = header
-	response.Status = connect.Check()
+	if code == 0 {
+		response.Status = connect.Check()
+	} else {
+		response.Status = code
+	}
 	// AuthenticatorISMG =MD5 ( Status+authenticatorSource+shar ed secret)
 	authDt := make([]byte, 0, 64)
 	authDt = append(authDt, fmt.Sprintf("%d", response.Status)...)
@@ -96,7 +100,7 @@ func (connect *CmppConnect) ToResponse() *CmppConnectResp {
 	return response
 }
 
-func reqAuthMd5(connect *CmppConnect) [16]byte {
+func reqAuthMd5(connect *Connect) [16]byte {
 	// authenticatorSource = MD5(Source_Addr+9 字节的 0 +shared secret+timestamp)
 	// timestamp 格式为: MMDDHHMMSS，即月日时分秒，10 位。
 	authDt := make([]byte, 0, 64)
@@ -108,14 +112,14 @@ func reqAuthMd5(connect *CmppConnect) [16]byte {
 	return authMd5
 }
 
-type CmppConnectResp struct {
+type ConnectResp struct {
 	*MessageHeader           // +12 = 12
 	Status            uint32 // +4 = 16
 	AuthenticatorISMG string // +16 = 32
 	Version           uint8  // +1 = 33
 }
 
-func (resp *CmppConnectResp) Encode() []byte {
+func (resp *ConnectResp) Encode() []byte {
 	frame := resp.MessageHeader.Encode()
 	if len(frame) == 33 && resp.TotalLength == 33 {
 		binary.BigEndian.PutUint32(frame[12:16], resp.Status)
@@ -125,7 +129,7 @@ func (resp *CmppConnectResp) Encode() []byte {
 	return frame
 }
 
-func (resp *CmppConnectResp) Decode(header *MessageHeader, frame []byte) error {
+func (resp *ConnectResp) Decode(header *MessageHeader, frame []byte) error {
 	// check
 	if header == nil || header.CommandId != CMPP_CONNECT_RESP || len(frame) < (33-HEAD_LENGTH) {
 		return ErrorPacket
@@ -137,7 +141,7 @@ func (resp *CmppConnectResp) Decode(header *MessageHeader, frame []byte) error {
 	return nil
 }
 
-func (resp *CmppConnectResp) String() string {
+func (resp *ConnectResp) String() string {
 	return fmt.Sprintf("{ Header: %s, Status: {%d: %s}, AuthenticatorISMG: %x, version: %x }",
 		resp.MessageHeader, resp.Status, ConnectStatusMap[resp.Status], resp.AuthenticatorISMG, resp.Version)
 }
