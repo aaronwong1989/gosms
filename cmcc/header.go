@@ -69,28 +69,28 @@ const (
 	CMPP_ACTIVE_TEST_RESP = uint32(0x80000008) // 激活测试应答
 )
 
-// var CMPP_QUERY = uint32(0x00000006)                     // 发送短信状态查询
-// var CMPP_QUERY_RESP = uint32(0x80000006)                // 发送短信状态查询应答
-// var CMPP_CANCEL = uint32(0x00000007)                    // 删除短信
-// var CMPP_CANCEL_RESP = uint32(0x80000007)               // 删除短信应答
-// var CMPP_FWD = uint32(0x00000009)                       // 消息前转
-// var CMPP_FWD_RESP = uint32(0x80000009)                  // 消息前转应答
-// var CMPP_MT_ROUTE = uint32(0x00000010)                  // MT 路由请求
-// var CMPP_MT_ROUTE_RESP = uint32(0x80000010)             // MT 路由请求应答
-// var CMPP_MO_ROUTE = uint32(0x00000011)                  // MO 路由请求
-// var CMPP_MO_ROUTE_RESP = uint32(0x80000011)             // MO 路由请求应答
-// var CMPP_GET_MT_ROUTE = uint32(0x00000012)              // 获取 MT 路由请求
-// var CMPP_GET_MT_ROUTE_RESP = uint32(0x80000012)         // 获取 MT 路由请求应答
-// var CMPP_MT_ROUTE_UPDATE = uint32(0x00000013)           // MT 路由更新
-// var CMPP_MT_ROUTE_UPDATE_RESP = uint32(0x80000013)      // MT 路由更新应答
-// var CMPP_MO_ROUTE_UPDATE = uint32(0x00000014)           // MO 路由更新
-// var CMPP_MO_ROUTE_UPDATE_RESP = uint32(0x80000014)      // MO 路由更新应答
-// var CMPP_PUSH_MT_ROUTE_UPDATE = uint32(0x00000015)      // MT 路由更新
-// var CMPP_PUSH_MT_ROUTE_UPDATE_RESP = uint32(0x80000015) // MT 路由更新应答
-// var CMPP_PUSH_MO_ROUTE_UPDATE = uint32(0x00000016)      // MO 路由更新
-// var CMPP_PUSH_MO_ROUTE_UPDATE_RESP = uint32(0x80000016) // MO 路由更新应答
-// var CMPP_GET_MO_ROUTE = uint32(0x00000017)              // 获取 MO 路由请求
-// var CMPP_GET_MO_ROUTE_RESP = uint32(0x80000017)         // 获取 MO 路由请求应答
+// const CMPP_QUERY = uint32(0x00000006)                     // 发送短信状态查询
+// const CMPP_QUERY_RESP = uint32(0x80000006)                // 发送短信状态查询应答
+// const CMPP_CANCEL = uint32(0x00000007)                    // 删除短信
+// const CMPP_CANCEL_RESP = uint32(0x80000007)               // 删除短信应答
+// const CMPP_FWD = uint32(0x00000009)                       // 消息前转
+// const CMPP_FWD_RESP = uint32(0x80000009)                  // 消息前转应答
+// const CMPP_MT_ROUTE = uint32(0x00000010)                  // MT 路由请求
+// const CMPP_MT_ROUTE_RESP = uint32(0x80000010)             // MT 路由请求应答
+// const CMPP_MO_ROUTE = uint32(0x00000011)                  // MO 路由请求
+// const CMPP_MO_ROUTE_RESP = uint32(0x80000011)             // MO 路由请求应答
+// const CMPP_GET_MT_ROUTE = uint32(0x00000012)              // 获取 MT 路由请求
+// const CMPP_GET_MT_ROUTE_RESP = uint32(0x80000012)         // 获取 MT 路由请求应答
+// const CMPP_MT_ROUTE_UPDATE = uint32(0x00000013)           // MT 路由更新
+// const CMPP_MT_ROUTE_UPDATE_RESP = uint32(0x80000013)      // MT 路由更新应答
+// const CMPP_MO_ROUTE_UPDATE = uint32(0x00000014)           // MO 路由更新
+// const CMPP_MO_ROUTE_UPDATE_RESP = uint32(0x80000014)      // MO 路由更新应答
+// const CMPP_PUSH_MT_ROUTE_UPDATE = uint32(0x00000015)      // MT 路由更新
+// const CMPP_PUSH_MT_ROUTE_UPDATE_RESP = uint32(0x80000015) // MT 路由更新应答
+// const CMPP_PUSH_MO_ROUTE_UPDATE = uint32(0x00000016)      // MO 路由更新
+// const CMPP_PUSH_MO_ROUTE_UPDATE_RESP = uint32(0x80000016) // MO 路由更新应答
+// const CMPP_GET_MO_ROUTE = uint32(0x00000017)              // 获取 MO 路由请求
+// const CMPP_GET_MO_ROUTE_RESP = uint32(0x80000017)         // 获取 MO 路由请求应答
 
 var CommandMap = make(map[uint32]string)
 
