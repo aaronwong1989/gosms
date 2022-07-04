@@ -10,9 +10,9 @@ import (
 	"golang.org/x/text/transform"
 )
 
-const (
-	baseLen = 163
-)
+// Submit
+// 3.0版 feeTerminalId、destTerminalId 均为32字节，无Reserve字段，有LinkId字段
+// 2.0版 feeTerminalId、destTerminalId 均为21字节，无LinkId字段，有Reserve字段
 
 type Submit struct {
 	*MessageHeader        // 消息头，【12字节】
@@ -66,8 +66,11 @@ type Submit struct {
 
 func NewSubmit(phones []string, content string, opts ...Option) (messages []*Submit) {
 	options := loadOptions(opts...)
-
-	header := &MessageHeader{TotalLength: baseLen, CommandId: CMPP_SUBMIT, SequenceId: uint32(Sequence32.NextVal())}
+	baseLen := 140
+	if V3() {
+		baseLen = 163
+	}
+	header := &MessageHeader{TotalLength: uint32(baseLen), CommandId: CMPP_SUBMIT, SequenceId: uint32(Sequence32.NextVal())}
 	submit := &Submit{MessageHeader: header}
 
 	setOptions(submit, options)
@@ -75,9 +78,13 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 
 	submit.destUsrTl = uint8(len(phones))
 	submit.destTerminalId = strings.Join(phones, ",")
-	termIds := make([]byte, int(submit.destUsrTl)<<5)
+	idLen := 21
+	if V3() {
+		idLen = 32
+	}
+	termIds := make([]byte, idLen*int(submit.destUsrTl))
 	for i, p := range phones {
-		copy(termIds[i<<5:(i+1)<<5], p)
+		copy(termIds[i*idLen:(i+1)*idLen], p)
 	}
 	submit.termIds = termIds
 
@@ -118,57 +125,53 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 
 func (sub *Submit) Encode() []byte {
 	frame := sub.MessageHeader.Encode()
-	// msgId +8 = 20
-	// Pk_total + 1 = 21
 	frame[20] = sub.pkTotal
-	// Pk_number + 1 = 22
 	frame[21] = sub.pkNumber
-	// Registered_Delivery + 1 = 23
 	frame[22] = sub.registeredDel
-	// Msg_level + 1 = 24
 	frame[23] = sub.msgLevel
-	// Service_Id + 10 = 34
 	copy(frame[24:34], sub.serviceId)
-	// Fee_UserType + 1 = 35
 	frame[34] = sub.feeUsertype
-	// Fee_terminal_Id + 32 = 67
-	copy(frame[35:67], sub.feeTerminalId)
-	// Fee_terminal_type + 1 = 68
-	frame[67] = sub.feeTerminalType
-	// TP_pId	    + 1  = 69
-	frame[68] = sub.tpPid
-	// TP_udhi	  + 1  = 70
-	frame[69] = sub.tpUdhi
-	// Msg_Fmt	  + 1  = 71
-	frame[70] = sub.msgFmt
-	// Msg_src	  + 6  = 77
-	copy(frame[71:77], sub.msgSrc)
-	// FeeType	  + 2  = 79
-	copy(frame[77:79], sub.feeType)
-	// FeeCode	  + 6  = 85
-	copy(frame[79:85], sub.feeCode)
-	// ValId_Time	   + 17  = 102
-	copy(frame[85:102], sub.validTime)
-	// At_Time	     + 17  = 119
-	copy(frame[102:119], sub.atTime)
-	// Src_Id	       + 21  = 140
-	copy(frame[119:140], sub.srcId)
-	// DestUsr_tl	   + 1   = 141
-	frame[140] = sub.destUsrTl
-	// Dest_terminal_Id	     + 32*DestUsr_tl
-	index := 141 + len(sub.termIds)
-	copy(frame[141:index], sub.termIds)
-	// Dest_terminal_type	   + 1
+	index := 35
+	if V3() {
+		copy(frame[index:index+32], sub.feeTerminalId)
+		index += 32
+	} else {
+		copy(frame[index:index+21], sub.feeTerminalId)
+		index += 21
+	}
+	frame[index] = sub.feeTerminalType
+	index++
+	frame[index] = sub.tpPid
+	index++
+	frame[index] = sub.tpUdhi
+	index++
+	frame[index] = sub.msgFmt
+	index++
+	copy(frame[index:index+6], sub.msgSrc)
+	index += 6
+	copy(frame[index:index+2], sub.feeType)
+	index += 2
+	copy(frame[index:index+6], sub.feeCode)
+	index += 6
+	copy(frame[index:index+17], sub.validTime)
+	index += 17
+	copy(frame[index:index+17], sub.atTime)
+	index += 17
+	copy(frame[index:index+21], sub.srcId)
+	index += 21
+	frame[index] = sub.destUsrTl
+	index++
+	copy(frame[index:index+len(sub.termIds)], sub.termIds)
+	index += len(sub.termIds)
 	frame[index] = sub.destTerminalType
 	index++
-	// Msg_Length	           + 1
 	frame[index] = sub.msgLength
 	index++
-	// Msg_Content	         + Msg_length
 	copy(frame[index:index+len(sub.msgBytes)], sub.msgBytes)
 	index += len(sub.msgBytes)
-	// LinkID 	             + 20
-	copy(frame[index:index+20], sub.linkID)
+	if V3() {
+		copy(frame[index:index+20], sub.linkID)
+	}
 	return frame
 }
 
@@ -178,53 +181,59 @@ func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
 		return ErrorPacket
 	}
 	sub.MessageHeader = header
-	// msgId +8 = 8
-	// Pk_total + 1 = 9
-	sub.pkTotal = frame[8]
-	// Pk_number + 1 = 10
-	sub.pkNumber = frame[9]
-	// Registered_Delivery + 1 = 11
-	sub.registeredDel = frame[10]
-	// Msg_level + 1 = 12
-	sub.msgLevel = frame[11]
-	// Service_Id + 10 = 22
-	sub.serviceId = TrimStr(frame[12:22])
-	//  Fee_UserType + 1 = 23
-	sub.feeUsertype = frame[22]
-	// Fee_terminal_Id + 32 = 55
-	sub.feeTerminalId = TrimStr(frame[23:55])
-	// Fee_terminal_type + 1 = 56
-	sub.feeTerminalType = frame[55]
-	// TP_pId	    + 1  = 57
-	sub.tpPid = frame[56]
-	// TP_udhi	  + 1  = 58
-	sub.tpUdhi = frame[57]
-	// Msg_Fmt	  + 1  = 59
-	sub.msgFmt = frame[58]
-	// Msg_src	  + 6  = 65
-	sub.msgSrc = TrimStr(frame[59:65])
-	// FeeType	  + 2  = 67
-	sub.feeType = TrimStr(frame[65:67])
-	// FeeCode	  + 6  = 73
-	sub.feeCode = TrimStr(frame[67:73])
-	// ValId_Time	   + 17  = 90
-	sub.validTime = TrimStr(frame[73:90])
-	// At_Time	     + 17  = 107
-	sub.atTime = TrimStr(frame[90:107])
-	// Src_Id	       + 21  = 128
-	sub.srcId = TrimStr(frame[107:128])
-	// DestUsr_tl	   + 1   = 129
-	sub.destUsrTl = frame[128]
-	// Dest_terminal_Id	     + 32*DestUsr_tl
-	index := 129 + int(sub.destUsrTl)<<5
-	sub.destTerminalId = TrimStr(frame[129:index])
-	// Dest_terminal_type	   + 1
+	// msgId uint64
+	index := 8
+	sub.pkTotal = frame[index]
+	index++
+	sub.pkNumber = frame[index]
+	index++
+	sub.registeredDel = frame[index]
+	index++
+	sub.msgLevel = frame[index]
+	index++
+	sub.serviceId = TrimStr(frame[index : index+10])
+	index += 10
+	sub.feeUsertype = frame[index]
+	index++
+	if V3() {
+		sub.feeTerminalId = TrimStr(frame[index : index+32])
+		index += 32
+	} else {
+		sub.feeTerminalId = TrimStr(frame[index : index+21])
+		index += 21
+	}
+	sub.feeTerminalType = frame[index]
+	index++
+	sub.tpPid = frame[index]
+	index++
+	sub.tpUdhi = frame[index]
+	index++
+	sub.msgFmt = frame[index]
+	index++
+	sub.msgSrc = TrimStr(frame[index : index+6])
+	index += 6
+	sub.feeType = TrimStr(frame[index : index+2])
+	index += 2
+	sub.feeCode = TrimStr(frame[index : index+6])
+	index += 6
+	sub.validTime = TrimStr(frame[index : index+17])
+	index += 17
+	sub.atTime = TrimStr(frame[index : index+17])
+	index += 17
+	sub.srcId = TrimStr(frame[index : index+21])
+	index += 21
+	sub.destUsrTl = frame[index]
+	index++
+	l := int(sub.destUsrTl * 21)
+	if V3() {
+		l = int(sub.destUsrTl) << 5
+	}
+	sub.destTerminalId = TrimStr(frame[index : index+l])
+	index += l
 	sub.destTerminalType = frame[index]
 	index++
-	// Msg_Length	           + 1
 	sub.msgLength = frame[index]
 	index++
-	// Msg_Content	         + Msg_length
 	content := frame[index : index+int(sub.msgLength)]
 	sub.msgBytes = content
 	if content[0] == 0x05 && content[1] == 0x00 && content[2] == 0x03 {
@@ -236,8 +245,9 @@ func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
 		sub.msgContent = TrimStr(content)
 	}
 	index += int(sub.msgLength)
-	// LinkID 	             + 20
-	sub.linkID = TrimStr(frame[index : index+20])
+	if V3() {
+		sub.linkID = TrimStr(frame[index : index+20])
+	}
 	return nil
 }
 
@@ -252,7 +262,10 @@ func (sub *Submit) ToResponse(result uint32) interface{} {
 	header := *sub.MessageHeader
 	resp.MessageHeader = &header
 	resp.CommandId = CMPP_SUBMIT_RESP
-	resp.TotalLength = HEAD_LENGTH + 12
+	resp.TotalLength = HEAD_LENGTH + 9
+	if V3() {
+		resp.TotalLength = HEAD_LENGTH + 12
+	}
 	if result == 0 {
 		resp.msgId = uint64(Sequence64.NextVal())
 	}
@@ -260,6 +273,7 @@ func (sub *Submit) ToResponse(result uint32) interface{} {
 	return resp
 }
 
+// TODO 支持3.0
 func (sub *Submit) ToDeliveryReport() *Delivery {
 	d := Delivery{}
 
@@ -286,7 +300,11 @@ func (sub *Submit) ToDeliveryReport() *Delivery {
 func (resp *SubmitResp) Encode() []byte {
 	frame := resp.MessageHeader.Encode()
 	binary.BigEndian.PutUint64(frame[12:20], resp.msgId)
-	binary.BigEndian.PutUint32(frame[20:24], resp.result)
+	if V3() {
+		binary.BigEndian.PutUint32(frame[20:24], resp.result)
+	} else {
+		frame[20] = byte(resp.result)
+	}
 	return frame
 }
 func (resp *SubmitResp) Decode(header *MessageHeader, frame []byte) error {
@@ -296,7 +314,11 @@ func (resp *SubmitResp) Decode(header *MessageHeader, frame []byte) error {
 	}
 	resp.MessageHeader = header
 	resp.msgId = binary.BigEndian.Uint64(frame[0:8])
-	resp.result = binary.BigEndian.Uint32(frame[8:12])
+	if V3() {
+		resp.result = binary.BigEndian.Uint32(frame[8:12])
+	} else {
+		resp.result = uint32(frame[8])
+	}
 	return nil
 }
 

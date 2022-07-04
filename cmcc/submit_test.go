@@ -108,11 +108,8 @@ func TestNewSubmit(t *testing.T) {
 	}
 }
 
-func TestSubmit_Decode(t *testing.T) {
-
-}
-
 func TestSubmit_Encode(t *testing.T) {
+	Conf.Version = 32
 	phones := []string{"17011112222"}
 	mts := NewSubmit(phones, Poem, MtAtTime(time.Now().Add(5*time.Minute)))
 
