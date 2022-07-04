@@ -55,6 +55,10 @@ func TrimStr(bts []byte) string {
 	return string(bts[0:i])
 }
 
+func V3() bool {
+	return Conf.Version&0xf0 == 3
+}
+
 const (
 	HEAD_LENGTH           = 12                 // 报文头长度
 	CMPP_CONNECT          = uint32(0x00000001) // 请求连接

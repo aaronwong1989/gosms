@@ -59,7 +59,7 @@ func (connect *Connect) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (connect *Connect) String() string {
-	return fmt.Sprintf("{ Header: %s, sourceAddr: %s, authenticatorSource: %x, version: %x, timestamp: %v }",
+	return fmt.Sprintf("{ Header: %s, sourceAddr: %s, authenticatorSource: %x, version: %x, timestamp: %010d }",
 		connect.MessageHeader, connect.sourceAddr, connect.authenticatorSource, connect.version, connect.timestamp)
 }
 
@@ -80,7 +80,12 @@ func (connect *Connect) Check() uint32 {
 func (connect *Connect) ToResponse(code uint32) interface{} {
 	response := &ConnectResp{}
 	header := &MessageHeader{}
-	header.TotalLength = 33
+	// 3.x 与 2.x Status长度不同
+	if V3() {
+		header.TotalLength = 33
+	} else {
+		header.TotalLength = 30
+	}
 	header.CommandId = CMPP_CONNECT_RESP
 	header.SequenceId = connect.SequenceId
 	response.MessageHeader = header
@@ -107,37 +112,58 @@ func reqAuthMd5(connect *Connect) [16]byte {
 	authDt = append(authDt, Conf.SourceAddr...)
 	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	authDt = append(authDt, Conf.SharedSecret...)
-	authDt = append(authDt, fmt.Sprintf("%d", connect.timestamp)...)
+	authDt = append(authDt, fmt.Sprintf("%010d", connect.timestamp)...)
 	authMd5 := md5.Sum(authDt)
 	return authMd5
 }
 
 type ConnectResp struct {
-	*MessageHeader           // +12 = 12
-	status            uint32 // +4 = 16
-	authenticatorISMG string // +16 = 32
-	version           uint8  // +1 = 33
+	*MessageHeader           // 协议头, 12字节
+	status            uint32 // 状态码，3.0版本4字节，2.0版本1字节
+	authenticatorISMG string // 认证串，16字节
+	version           uint8  // 版本，1字节
 }
 
 func (resp *ConnectResp) Encode() []byte {
 	frame := resp.MessageHeader.Encode()
-	if len(frame) == 33 && resp.TotalLength == 33 {
-		binary.BigEndian.PutUint32(frame[12:16], resp.status)
-		copy(frame[16:32], resp.authenticatorISMG)
-		frame[32] = resp.version
+	var index int
+	if len(frame) == int(resp.TotalLength) {
+		index = 12
+		if V3() {
+			binary.BigEndian.PutUint32(frame[index:index+4], resp.status)
+			index += 4
+		} else {
+			frame[index] = byte(resp.status)
+			index++
+		}
+		copy(frame[index:index+16], resp.authenticatorISMG)
+		index += 16
+		frame[index] = resp.version
 	}
 	return frame
 }
 
 func (resp *ConnectResp) Decode(header *MessageHeader, frame []byte) error {
+	bodyLen := 30
+	if V3() {
+		bodyLen = 33
+	}
 	// check
-	if header == nil || header.CommandId != CMPP_CONNECT_RESP || len(frame) < (33-HEAD_LENGTH) {
+	if header == nil || header.CommandId != CMPP_CONNECT_RESP || len(frame) < (bodyLen-HEAD_LENGTH) {
 		return ErrorPacket
 	}
+	var index int
 	resp.MessageHeader = header
-	resp.status = binary.BigEndian.Uint32(frame[0:4])
-	resp.authenticatorISMG = string(frame[4:20])
-	resp.version = frame[20]
+	if V3() {
+		resp.status = binary.BigEndian.Uint32(frame[0 : index+4])
+		index = 4
+	} else {
+		resp.status = uint32(frame[0])
+		index = 1
+	}
+	resp.authenticatorISMG = string(frame[index : index+16])
+	index += 16
+	resp.version = frame[index]
 	return nil
 }
 

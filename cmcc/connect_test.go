@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCmppConnect_Encode(t *testing.T) {
@@ -15,7 +17,7 @@ func TestCmppConnect_Encode(t *testing.T) {
 
 	connect := &Connect{MessageHeader: &header}
 	connect.sourceAddr = "123456"
-	connect.version = 0x30
+	connect.version = 0x20
 	connect.timestamp = uint32(1001235010)
 	md5str := reqAuthMd5(connect)
 	connect.authenticatorSource = string(md5str[:])
@@ -23,6 +25,11 @@ func TestCmppConnect_Encode(t *testing.T) {
 
 	frame := connect.Encode()
 	t.Logf("Connect: %x", frame)
+	assert.Equal(t, uint32(0), connect.Check())
+
+	resp := connect.ToResponse(0).(*ConnectResp)
+	t.Logf("Connect: %v", resp)
+	t.Logf("ConnectResp: %x", resp.Encode())
 }
 
 func TestTime(t *testing.T) {

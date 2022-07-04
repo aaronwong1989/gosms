@@ -14,4 +14,6 @@ func TestAnything(t *testing.T) {
 	s2 = make([]byte, 12)
 	copy(s2[10:12], "")
 	t.Logf("%s", s2)
+
+	t.Logf("%010d", 1234)
 }
