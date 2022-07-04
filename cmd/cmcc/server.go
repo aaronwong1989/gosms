@@ -136,7 +136,9 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	case cmcc.CMPP_ACTIVE_TEST_RESP:
 		return handActiveResp(c, header)
 	case cmcc.CMPP_TERMINATE:
+		return handleTerminate(s, c, header)
 	case cmcc.CMPP_TERMINATE_RESP:
+		return handleTerminateResp(s, c, header)
 	}
 
 	return gnet.None
@@ -202,6 +204,37 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 		}
 	})
 	return gnet.None
+}
+
+func handleTerminate(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
+	log.Infof("[%-9s] <<< %s", "OnTraffic", header)
+	resp := cmcc.NewTerminateResp(header.SequenceId)
+	// send cmpp_connect_resp async
+	_ = s.pool.Submit(func() {
+		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
+			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
+			s.Lock()
+			defer s.Unlock()
+			delete(s.connectedSockets, c.RemoteAddr().String())
+			_ = c.Close()
+			return nil
+		})
+		if err != nil {
+			log.Errorf("[%-9s] CMPP_TERMINATE_RESP ERROR: %v", "OnTraffic", err)
+		}
+	})
+	return gnet.None
+}
+
+func handleTerminateResp(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
+	log.Infof("[%-9s] <<< %s", "OnTraffic", header)
+	log.Infof("[%-9s] closing connection [%v<-->%v]", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
+	s.Lock()
+	defer s.Unlock()
+	delete(s.connectedSockets, c.RemoteAddr().String())
+	_ = c.Flush()
+	_ = c.Close()
+	return gnet.Close
 }
 
 // 处理上行消息

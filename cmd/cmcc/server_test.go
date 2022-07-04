@@ -24,9 +24,29 @@ var (
 	counterAt int64
 	wg        sync.WaitGroup
 
-	clients  = 3
-	duration = time.Second * 100
+	clients  = 1
+	duration = time.Second * 10
 )
+
+func TestServer_handleTerminate(t *testing.T) {
+	c, err := net.Dial("tcp", ":9000")
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+	defer func(c net.Conn) {
+		err := c.Close()
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+	}(c)
+
+	if !login(t, c) {
+		return
+	}
+
+	terminate(t, c)
+}
 
 func TestClient(t *testing.T) {
 	senders := 1
@@ -90,6 +110,9 @@ func runClient(t *testing.T, senders, receivers int) {
 		})
 
 		wg.Wait()
+		time.Sleep(time.Second)
+
+		terminate(t, c)
 	}(t)
 }
 
@@ -198,7 +221,7 @@ func sendDelivery(t *testing.T, c net.Conn) bool {
 }
 
 func logResult(t *testing.T) {
-	result := fmt.Sprintf("%s CounterMt=%d, CounterDl=%d, CounterAt=%d\n", time.Now().Format("2006-01-02T15:03:04.000"), counterMt, counterRt, counterAt)
+	result := fmt.Sprintf("%s CounterMt=%d, CounterDl=%d, CounterAt=%d\n", time.Now().Format("2006-01-02T15:04:05.000"), counterMt, counterRt, counterAt)
 	t.Logf(result)
 	file, err := os.OpenFile("./test.result.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
@@ -210,4 +233,25 @@ func logResult(t *testing.T) {
 		_ = writer.Flush()
 		_ = file.Close()
 	}(file, writer)
+}
+
+func terminate(t *testing.T, c net.Conn) {
+	term := cmcc.NewTerminate()
+	_, err := c.Write(term.Encode())
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+	t.Logf(">>> %s", term)
+
+	bytes := make([]byte, 12)
+	l, err := c.Read(bytes)
+	if err != nil || l != 12 {
+		t.Errorf("%v", err)
+	}
+	err = term.Decode(bytes)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	t.Logf("<<< %s", term)
 }
