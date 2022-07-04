@@ -164,15 +164,15 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 
 	log.Infof("[%-9s] <<< %s", "OnTraffic", connect)
 	resp := connect.ToResponse(0).(*cmcc.ConnectResp)
-	if resp.Status != 0 {
-		log.Errorf("[%-9s] CMPP_CONNECT ERROR: Auth Error, Status=(%d,%s)", "OnTraffic", resp.Status, cmcc.ConnectStatusMap[resp.Status])
+	if resp.Status() != 0 {
+		log.Errorf("[%-9s] CMPP_CONNECT ERROR: Auth Error, status=(%d,%s)", "OnTraffic", resp.Status(), cmcc.ConnectStatusMap[resp.Status()])
 	}
 
 	// send cmpp_connect_resp async
 	_ = s.pool.Submit(func() {
 		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
-			if resp.Status == 0 {
+			if resp.Status() == 0 {
 				s.Lock()
 				defer s.Unlock()
 				s.connectedSockets[c.RemoteAddr().String()] = c
@@ -208,7 +208,7 @@ func handleDelivery(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Act
 	// handle message async
 	_ = s.pool.Submit(func() {
 		// 模拟消息处理耗时
-		processTime := time.Duration(rand.Intn(5))
+		processTime := time.Duration(randNum(cmcc.Conf.MinSubmitRespMs, cmcc.Conf.MaxSubmitRespMs))
 		time.Sleep(processTime * time.Millisecond)
 
 		rtCode := uint32(0)
@@ -246,7 +246,12 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 	}
 	log.Debugf("[%-9s] <<< %s", "OnTraffic", sub)
 	// handle message async
-	_ = s.pool.Submit(func() {
+	_ = s.pool.Submit(mtAsyncHandler(s, c, sub))
+	return gnet.None
+}
+
+func mtAsyncHandler(s *Server, c gnet.Conn, sub *cmcc.Submit) func() {
+	return func() {
 		// 采用通道控制消息收发速度,向通道发送信号
 		s.window <- struct{}{}
 		defer func() {
@@ -265,15 +270,36 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Actio
 		}
 		resp := sub.ToResponse(rtCode).(*cmcc.SubmitResp)
 		// 发送响应
-		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
+		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			log.Debugf("[%-9s] >>> %s", "OnTraffic", resp)
 			return nil
 		})
 		if err != nil {
 			log.Errorf("[%-9s] CMPP_SUBMIT_RESP ERROR: %v", "OnTraffic", err)
 		}
-	})
-	return gnet.None
+
+		// 发送状态报告
+		if resp.Result() == 0 {
+			_ = s.pool.Submit(reportAsyncSender(c, sub, processTime))
+		}
+	}
+}
+
+func reportAsyncSender(c gnet.Conn, sub *cmcc.Submit, wait time.Duration) func() {
+	return func() {
+		dly := sub.ToDeliveryReport()
+		// 模拟状态报告发送前的耗时
+		processTime := wait + time.Duration(cmcc.Conf.FixReportRespMs)
+		time.Sleep(processTime * time.Millisecond)
+		// 发送状态报告
+		err := c.AsyncWrite(dly.Encode(), func(c gnet.Conn) error {
+			log.Debugf("[%-9s] >>> %s", "OnTraffic", dly)
+			return nil
+		})
+		if err != nil {
+			log.Errorf("[%-9s] CMPP_DELIVERY_REPORT ERROR: %v", "OnTraffic", err)
+		}
+	}
 }
 
 func handActive(s *Server, c gnet.Conn, header *cmcc.MessageHeader) (action gnet.Action) {

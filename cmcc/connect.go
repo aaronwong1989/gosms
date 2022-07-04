@@ -85,18 +85,18 @@ func (connect *Connect) ToResponse(code uint32) interface{} {
 	header.SequenceId = connect.SequenceId
 	response.MessageHeader = header
 	if code == 0 {
-		response.Status = connect.Check()
+		response.status = connect.Check()
 	} else {
-		response.Status = code
+		response.status = code
 	}
-	// AuthenticatorISMG =MD5 ( Status+authenticatorSource+shar ed secret)
+	// authenticatorISMG =MD5 ( status+authenticatorSource+shar ed secret)
 	authDt := make([]byte, 0, 64)
-	authDt = append(authDt, fmt.Sprintf("%d", response.Status)...)
+	authDt = append(authDt, fmt.Sprintf("%d", response.status)...)
 	authDt = append(authDt, connect.authenticatorSource...)
 	authDt = append(authDt, Conf.SharedSecret...)
 	auth := md5.Sum(authDt)
-	response.AuthenticatorISMG = string(auth[:])
-	response.Version = Conf.Version
+	response.authenticatorISMG = string(auth[:])
+	response.version = Conf.Version
 	return response
 }
 
@@ -114,17 +114,17 @@ func reqAuthMd5(connect *Connect) [16]byte {
 
 type ConnectResp struct {
 	*MessageHeader           // +12 = 12
-	Status            uint32 // +4 = 16
-	AuthenticatorISMG string // +16 = 32
-	Version           uint8  // +1 = 33
+	status            uint32 // +4 = 16
+	authenticatorISMG string // +16 = 32
+	version           uint8  // +1 = 33
 }
 
 func (resp *ConnectResp) Encode() []byte {
 	frame := resp.MessageHeader.Encode()
 	if len(frame) == 33 && resp.TotalLength == 33 {
-		binary.BigEndian.PutUint32(frame[12:16], resp.Status)
-		copy(frame[16:32], resp.AuthenticatorISMG)
-		frame[32] = resp.Version
+		binary.BigEndian.PutUint32(frame[12:16], resp.status)
+		copy(frame[16:32], resp.authenticatorISMG)
+		frame[32] = resp.version
 	}
 	return frame
 }
@@ -135,15 +135,19 @@ func (resp *ConnectResp) Decode(header *MessageHeader, frame []byte) error {
 		return ErrorPacket
 	}
 	resp.MessageHeader = header
-	resp.Status = binary.BigEndian.Uint32(frame[0:4])
-	resp.AuthenticatorISMG = string(frame[4:20])
-	resp.Version = frame[20]
+	resp.status = binary.BigEndian.Uint32(frame[0:4])
+	resp.authenticatorISMG = string(frame[4:20])
+	resp.version = frame[20]
 	return nil
 }
 
 func (resp *ConnectResp) String() string {
-	return fmt.Sprintf("{ Header: %s, Status: {%d: %s}, AuthenticatorISMG: %x, version: %x }",
-		resp.MessageHeader, resp.Status, ConnectStatusMap[resp.Status], resp.AuthenticatorISMG, resp.Version)
+	return fmt.Sprintf("{ Header: %s, status: {%d: %s}, authenticatorISMG: %x, version: %x }",
+		resp.MessageHeader, resp.status, ConnectStatusMap[resp.status], resp.authenticatorISMG, resp.version)
+}
+
+func (resp *ConnectResp) Status() uint32 {
+	return resp.status
 }
 
 var ConnectStatusMap = map[uint32]string{

@@ -268,6 +268,8 @@ func (sub *Submit) ToDeliveryReport() *Delivery {
 	head.CommandId = CMPP_DELIVER
 	d.MessageHeader = &head
 
+	d.registeredDelivery = 1
+	d.msgLength = 60
 	d.destId = sub.srcId
 	d.serviceId = sub.serviceId
 	d.srcTerminalId = sub.destTerminalId
@@ -296,6 +298,14 @@ func (resp *SubmitResp) Decode(header *MessageHeader, frame []byte) error {
 	resp.msgId = binary.BigEndian.Uint64(frame[0:8])
 	resp.result = binary.BigEndian.Uint32(frame[8:12])
 	return nil
+}
+
+func (resp *SubmitResp) MsgId() uint64 {
+	return resp.msgId
+}
+
+func (resp *SubmitResp) Result() uint32 {
+	return resp.result
 }
 
 func MsgSlices(fmt uint8, content string) (slices [][]byte) {

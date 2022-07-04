@@ -19,6 +19,7 @@ import (
 
 var pool = goroutine.Default()
 var counterMt int64
+var counterRt int64
 var counterAt int64
 var duration = time.Second * 10
 var wg sync.WaitGroup
@@ -42,7 +43,7 @@ func TestClient(t *testing.T) {
 }
 
 func logResult(t *testing.T) {
-	result := fmt.Sprintf("%s CounterMt=%d, CounterAt=%d\n", time.Now().Format("2006-01-02T15:03:04.000"), counterMt, counterAt)
+	result := fmt.Sprintf("%s CounterMt=%d, CounterDl=%d, CounterAt=%d\n", time.Now().Format("2006-01-02T15:03:04.000"), counterMt, counterRt, counterAt)
 	t.Logf(result)
 	file, err := os.OpenFile("./test.result.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
@@ -90,6 +91,16 @@ func runClient(t *testing.T, senders, receivers int) {
 				}
 			})
 		}
+
+		// 上行短信发送
+		_ = pool.Submit(func() {
+			for b := true; b; {
+				if time.Now().Unix()%100 == 0 {
+					b = sendDelivery(t, c)
+				}
+			}
+		})
+
 		wg.Wait()
 	}(t)
 }
@@ -115,7 +126,7 @@ func login(t *testing.T, c net.Conn) bool {
 		return false
 	}
 	t.Logf("<<<: %s", rep)
-	return 0 == rep.Status
+	return 0 == rep.Status()
 }
 
 func sendMt(t *testing.T, c net.Conn) bool {
@@ -156,6 +167,19 @@ func readResp(t *testing.T, c net.Conn) bool {
 			atomic.AddInt64(&counterMt, 1)
 			t.Logf("<<< %s", csr)
 		}
+	} else if header.CommandId == cmcc.CMPP_DELIVER {
+		dly := &cmcc.Delivery{}
+		err := dly.Decode(header, bytes)
+		if err != nil {
+			t.Errorf("%v", err)
+			return false
+		} else {
+			// 状态报告计数
+			if dly.RegisteredDelivery() == 1 {
+				atomic.AddInt64(&counterRt, 1)
+			}
+			t.Logf("<<< %s", dly)
+		}
 	} else if header.CommandId == cmcc.CMPP_ACTIVE_TEST {
 		at := cmcc.ActiveTest{MessageHeader: header}
 		t.Logf("<<< %s", at)
@@ -171,5 +195,16 @@ func readResp(t *testing.T, c net.Conn) bool {
 	} else {
 		t.Logf("<<< %s:%x", header, bytes)
 	}
+	return true
+}
+
+func sendDelivery(t *testing.T, c net.Conn) bool {
+	dly := cmcc.NewDelivery("13700001111", "hello word 中国", "", "")
+	_, err := c.Write(dly.Encode())
+	if err != nil {
+		t.Errorf("%v", err)
+		return false
+	}
+	t.Logf(">>> %s", dly)
 	return true
 }

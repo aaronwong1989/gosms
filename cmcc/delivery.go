@@ -128,9 +128,10 @@ func (d *Delivery) String() string {
 		content = strings.ReplaceAll(d.msgContent, "\n", " ")
 	}
 
-	return fmt.Sprintf("{ msgId: %d, destId: %v, serviceId: %v, tpPid: %d, tpUdhi: %d, msgFmt: %d, "+
+	return fmt.Sprintf("{ header:%s, msgId: %d, destId: %v, serviceId: %v, tpPid: %d, tpUdhi: %d, msgFmt: %d, "+
 		"srcTerminalId: %v, srcTerminalType: %d, registeredDelivery: %d, "+
 		"msgLength: %d, setMsgContent: %v, linkID: %v }",
+		d.MessageHeader,
 		d.msgId, d.destId, d.serviceId, d.tpPid, d.tpUdhi, d.msgFmt,
 		d.srcTerminalId, d.srcTerminalType, d.registeredDelivery,
 		d.msgLength, content, d.linkID,
@@ -160,6 +161,10 @@ func setMsgContent(dly *Delivery, msg string) {
 	dly.msgContent = msg
 }
 
+func (d *Delivery) RegisteredDelivery() uint8 {
+	return d.registeredDelivery
+}
+
 type DeliveryResp struct {
 	*MessageHeader
 	msgId  uint64 // 消息标识,来自CMPP_DELIVERY
@@ -182,8 +187,12 @@ func (r *DeliveryResp) Decode(header *MessageHeader, frame []byte) error {
 	return nil
 }
 
-func (r *DeliveryResp) GoString() string {
+func (r *DeliveryResp) String() string {
 	return fmt.Sprintf("{ header: %v, msgId: %d, result: {%d: %s} }", r.MessageHeader, r.msgId, r.result, DeliveryResultMap[r.result])
+}
+
+func (r *DeliveryResp) SetResult(result uint32) {
+	r.result = result
 }
 
 var DeliveryResultMap = map[uint32]string{

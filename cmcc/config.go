@@ -38,6 +38,7 @@ type Config struct {
 	SuccessRate     uint32 `yaml:"success-rate"`
 	MinSubmitRespMs int    `yaml:"min-submit-resp-ms"`
 	MaxSubmitRespMs int    `yaml:"max-submit-resp-ms"`
+	FixReportRespMs int    `yaml:"fix-report-resp-ms"`
 }
 
 func init() {
