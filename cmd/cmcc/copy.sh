@@ -3,7 +3,7 @@
 # 设置环境信息
 
 # 编译
-go build
+go build -trimpath
 
 mv cmcc ~/smsvg/
 cp -f cmcc.yaml ~/.cmcc.yaml
