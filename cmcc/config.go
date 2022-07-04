@@ -13,7 +13,7 @@ var Conf Config
 type Config struct {
 	// 公共参数
 	SourceAddr         string        `yaml:"sp-id"`
-	SharedSecret       string        `yaml:"sharedSecret"`
+	SharedSecret       string        `yaml:"shared-secret"`
 	Version            uint8         `yaml:"version"`
 	MaxCons            int           `yaml:"max-cons"`
 	ActiveTestDuration time.Duration `yaml:"active-test-duration"`
