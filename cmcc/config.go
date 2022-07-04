@@ -35,10 +35,10 @@ type Config struct {
 	ValidDuration   time.Duration `yaml:"default-valid-duration"`
 
 	// 模拟网关相关参数
-	SuccessRate     uint32 `yaml:"success-rate"`
-	MinSubmitRespMs int    `yaml:"min-submit-resp-ms"`
-	MaxSubmitRespMs int    `yaml:"max-submit-resp-ms"`
-	FixReportRespMs int    `yaml:"fix-report-resp-ms"`
+	SuccessRate     int32 `yaml:"success-rate"`
+	MinSubmitRespMs int32 `yaml:"min-submit-resp-ms"`
+	MaxSubmitRespMs int32 `yaml:"max-submit-resp-ms"`
+	FixReportRespMs int32 `yaml:"fix-report-resp-ms"`
 }
 
 func init() {

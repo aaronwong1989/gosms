@@ -17,15 +17,18 @@ import (
 	"sms-vgateway/cmcc"
 )
 
-var pool = goroutine.Default()
-var counterMt int64
-var counterRt int64
-var counterAt int64
-var duration = time.Second * 10
-var wg sync.WaitGroup
+var (
+	pool      = goroutine.Default()
+	counterMt int64
+	counterRt int64
+	counterAt int64
+	wg        sync.WaitGroup
+
+	clients  = 3
+	duration = time.Second * 100
+)
 
 func TestClient(t *testing.T) {
-	clients := 1
 	senders := 1
 	receivers := 1
 	wg.Add(1)
@@ -40,21 +43,6 @@ func TestClient(t *testing.T) {
 		pool.Release()
 		wg.Done()
 	}()
-}
-
-func logResult(t *testing.T) {
-	result := fmt.Sprintf("%s CounterMt=%d, CounterDl=%d, CounterAt=%d\n", time.Now().Format("2006-01-02T15:03:04.000"), counterMt, counterRt, counterAt)
-	t.Logf(result)
-	file, err := os.OpenFile("./test.result.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		t.Errorf("%v", err)
-	}
-	writer := bufio.NewWriter(file)
-	_, _ = writer.WriteString(result)
-	defer func(file *os.File, writer *bufio.Writer) {
-		_ = writer.Flush()
-		_ = file.Close()
-	}(file, writer)
 }
 
 func runClient(t *testing.T, senders, receivers int) {
@@ -207,4 +195,19 @@ func sendDelivery(t *testing.T, c net.Conn) bool {
 	}
 	t.Logf(">>> %s", dly)
 	return true
+}
+
+func logResult(t *testing.T) {
+	result := fmt.Sprintf("%s CounterMt=%d, CounterDl=%d, CounterAt=%d\n", time.Now().Format("2006-01-02T15:03:04.000"), counterMt, counterRt, counterAt)
+	t.Logf(result)
+	file, err := os.OpenFile("./test.result.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	writer := bufio.NewWriter(file)
+	_, _ = writer.WriteString(result)
+	defer func(file *os.File, writer *bufio.Writer) {
+		_ = writer.Flush()
+		_ = file.Close()
+	}(file, writer)
 }

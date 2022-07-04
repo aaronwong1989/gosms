@@ -2,11 +2,17 @@
 # 目前仅支持模拟单一 SpId
 sp-id: "123456"
 sharedSecret: "shared secret"
+# 见CMPP协议，48表示3.0 即 0x30 = 0011 0000
 version: 48
+# 最大连接数
 max-cons: 10
+# 心跳报文发送间隔
 active-test-duration: 60s
+# 多节点部署时使用，datacenter-id 取值 [0,3]
 datacenter-id: 0
+# 多节点部署时使用，worker-id 取值 [0,8]
 worker-id: 0
+# 接收窗口大小
 receive-window-size: 512
 
 ### 以下为MT发送相关参数 ###

@@ -8,6 +8,8 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net/http"
+	_ "net/http/pprof"
 	"sync"
 	"time"
 
@@ -21,6 +23,8 @@ import (
 var log = logging.GetDefaultLogger()
 
 func main() {
+	startMonitor()
+
 	var port int
 	var multicore bool
 
@@ -41,6 +45,17 @@ func main() {
 	}
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
+}
+
+// 开启pprof，监听请求
+func startMonitor() {
+	go func() {
+		addr := ":9001"
+		log.Infof("debug pprof @ http://%s/debug/pprof/", addr)
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			fmt.Printf("start pprof failed on %s\n", addr)
+		}
+	}()
 }
 
 type Server struct {
@@ -189,6 +204,7 @@ func handleConnect(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Acti
 	return gnet.None
 }
 
+// 处理上行消息
 func handleDelivery(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Action {
 	// check connect
 	if s.connectedSockets[c.RemoteAddr().String()] == nil {
@@ -212,7 +228,7 @@ func handleDelivery(s *Server, c gnet.Conn, header *cmcc.MessageHeader) gnet.Act
 		time.Sleep(processTime * time.Millisecond)
 
 		rtCode := uint32(0)
-		if dly.SequenceId%cmcc.Conf.SuccessRate == 0 {
+		if diceCheck(cmcc.Conf.SuccessRate) {
 			// 失败消息的返回码
 			rtCode = 9
 		}
@@ -264,7 +280,7 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *cmcc.Submit) func() {
 		time.Sleep(processTime * time.Millisecond)
 
 		rtCode := uint32(0)
-		if sub.SequenceId%cmcc.Conf.SuccessRate == 0 {
+		if diceCheck(cmcc.Conf.SuccessRate) {
 			// 失败消息的返回码
 			rtCode = 13
 		}
@@ -287,6 +303,9 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *cmcc.Submit) func() {
 
 func reportAsyncSender(c gnet.Conn, sub *cmcc.Submit, wait time.Duration) func() {
 	return func() {
+		if diceCheck(100) {
+			return
+		}
 		dly := sub.ToDeliveryReport()
 		// 模拟状态报告发送前的耗时
 		processTime := wait + time.Duration(cmcc.Conf.FixReportRespMs)
@@ -402,7 +421,12 @@ func (s *Server) activeCons() int {
 	return s.engine.CountConnections()
 }
 
-func randNum(min, max int) int {
+func randNum(min, max int32) int {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	return rand.Intn(max-min) + min
+	return rand.Intn(int(max-min)) + int(min)
+}
+
+// 当前时间尾数与给定数相同时返回true
+func diceCheck(prob int32) bool {
+	return time.Now().Unix()%int64(prob) == 0
 }
