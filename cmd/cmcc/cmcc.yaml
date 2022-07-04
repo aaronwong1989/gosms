@@ -1,5 +1,5 @@
 ### 网关参数 ###
-# 目前仅支持模拟单一 SpId
+# 即SourceAddr，目前仅支持模拟单一值
 sp-id: "123456"
 sharedSecret: "shared secret"
 # 见CMPP协议，48表示3.0 即 0x30 = 0011 0000
