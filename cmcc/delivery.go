@@ -41,9 +41,12 @@ func NewDelivery(phone string, msg string, dest string, serviceId string) *Deliv
 	} else {
 		dly.serviceId = Conf.ServiceId
 	}
-
+	baseLen := uint32(85)
+	if V3() {
+		baseLen = 109
+	}
 	header := MessageHeader{
-		TotalLength: 109 + uint32(dly.msgLength),
+		TotalLength: baseLen + uint32(dly.msgLength),
 		CommandId:   CMPP_DELIVER,
 		SequenceId:  uint32(Sequence32.NextVal())}
 	dly.MessageHeader = &header
@@ -58,22 +61,35 @@ func (d *Delivery) Encode() []byte {
 	frame[51] = d.tpPid
 	frame[52] = d.tpUdhi
 	frame[53] = d.msgFmt
-	copy(frame[54:86], d.srcTerminalId)
-	frame[86] = d.srcTerminalType
-	frame[87] = d.registeredDelivery
-	frame[88] = d.msgLength
-	index := 89 + int(d.msgLength)
+	index := 54
+	if V3() {
+		copy(frame[index:index+32], d.srcTerminalId)
+		index += 32
+		frame[index] = d.srcTerminalType
+		index++
+	} else {
+		copy(frame[index:index+21], d.srcTerminalId)
+		index += 21
+	}
+	frame[index] = d.registeredDelivery
+	index++
+	frame[index] = d.msgLength
+	index++
+	l := int(d.msgLength)
 	if d.registeredDelivery == 1 {
 		// 状态报告
-		copy(frame[89:index], d.report.Encode())
+		copy(frame[index:index+l], d.report.Encode())
 	} else {
 		// 上行短信，不支持长短信，固定选用第一片 （New时需处理）
 		slices := MsgSlices(d.msgFmt, d.msgContent)
 		// 不支持长短信，固定选用第一片
 		content := slices[0]
-		copy(frame[89:index], content)
+		copy(frame[index:index+l], content)
 	}
-	copy(frame[index:index+20], d.linkID)
+	index += l
+	if V3() {
+		copy(frame[index:index+20], d.linkID)
+	}
 
 	return frame
 }
@@ -89,32 +105,47 @@ func (d *Delivery) Decode(header *MessageHeader, frame []byte) error {
 	d.tpPid = frame[39]
 	d.tpUdhi = frame[40]
 	d.msgFmt = frame[41]
-	d.srcTerminalId = TrimStr(frame[42:74])
-	d.srcTerminalType = frame[74]
-	d.registeredDelivery = frame[75]
-
-	d.msgLength = frame[76]
-	index := 77 + int(d.msgLength)
+	index := 42
+	if V3() {
+		d.srcTerminalId = TrimStr(frame[index : index+32])
+		index += 32
+		d.srcTerminalType = frame[index]
+		index++
+	} else {
+		d.srcTerminalId = TrimStr(frame[index : index+21])
+		index += 21
+	}
+	d.registeredDelivery = frame[index]
+	index++
+	d.msgLength = frame[index]
+	index++
+	l := int(d.msgLength)
 	if d.registeredDelivery == 1 {
 		rpt := &Report{}
-		err := rpt.Decode(frame[77:index])
+		err := rpt.Decode(frame[index : index+l])
 		if err != nil {
 			return err
 		}
 		d.report = rpt
 	} else {
-		d.msgContent = TrimStr(frame[77:index])
+		d.msgContent = TrimStr(frame[index : index+l])
 	}
-	d.linkID = TrimStr(frame[index:])
+	index += l
+	if V3() {
+		d.linkID = TrimStr(frame[index : index+20])
+	}
 	return nil
 }
 
 func (d *Delivery) ToResponse(code uint32) interface{} {
 	header := *d.MessageHeader
 	dr := &DeliveryResp{}
-	dr.TotalLength = HEAD_LENGTH + 12
-	dr.CommandId = CMPP_DELIVER_RESP
 	dr.MessageHeader = &header
+	dr.TotalLength = HEAD_LENGTH + 9
+	if V3() {
+		dr.TotalLength = HEAD_LENGTH + 12
+	}
+	dr.CommandId = CMPP_DELIVER_RESP
 	dr.msgId = d.msgId
 	dr.result = code
 	return dr
@@ -174,7 +205,11 @@ type DeliveryResp struct {
 func (r *DeliveryResp) Encode() []byte {
 	frame := r.MessageHeader.Encode()
 	binary.BigEndian.PutUint64(frame[12:20], r.msgId)
-	binary.BigEndian.PutUint32(frame[20:24], r.result)
+	if V3() {
+		binary.BigEndian.PutUint32(frame[20:24], r.result)
+	} else {
+		frame[20] = byte(r.result)
+	}
 	return frame
 }
 
@@ -183,7 +218,11 @@ func (r *DeliveryResp) Decode(header *MessageHeader, frame []byte) error {
 		return ErrorPacket
 	}
 	r.msgId = binary.BigEndian.Uint64(frame[0:8])
-	r.result = binary.BigEndian.Uint32(frame[8:12])
+	if V3() {
+		r.result = binary.BigEndian.Uint32(frame[8:12])
+	} else {
+		r.result = uint32(frame[8])
+	}
 	return nil
 }
 

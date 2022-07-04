@@ -25,7 +25,7 @@ var (
 	wg        sync.WaitGroup
 
 	clients  = 2
-	duration = time.Second * 500
+	duration = time.Second * 100
 )
 
 func TestClient(t *testing.T) {
@@ -45,7 +45,7 @@ func TestClient(t *testing.T) {
 	}()
 }
 
-func TestServer_handleTerminate(t *testing.T) {
+func TestServer_HandleTerminate(t *testing.T) {
 	c, err := net.Dial("tcp", ":9000")
 	if err != nil {
 		t.Errorf("%v", err)
@@ -103,14 +103,12 @@ func runClient(t *testing.T, senders, receivers int) {
 		// 上行短信发送
 		_ = pool.Submit(func() {
 			for b := true; b; {
-				if time.Now().Unix()%100 == 0 {
-					b = sendDelivery(t, c)
-				}
+				b = sendDelivery(t, c)
+				time.Sleep(time.Millisecond * 100)
 			}
 		})
 
 		wg.Wait()
-		time.Sleep(time.Second)
 
 		terminate(t, c)
 	}(t)
@@ -122,9 +120,14 @@ func login(t *testing.T, c net.Conn) bool {
 	t.Logf(">>>: %s", con)
 	i, _ := c.Write(con.Encode())
 	assert.True(t, uint32(i) == con.TotalLength)
-	resp := make([]byte, 33)
+
+	pl := 30
+	if cmcc.V3() {
+		pl = 33
+	}
+	resp := make([]byte, pl)
 	i, _ = c.Read(resp)
-	assert.True(t, i == 33)
+	assert.True(t, i == pl)
 
 	header := &cmcc.MessageHeader{}
 	err := header.Decode(resp)

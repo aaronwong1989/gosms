@@ -3,6 +3,8 @@ package cmcc
 import (
 	"encoding/binary"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMessageHeader_Encode(t *testing.T) {
@@ -17,6 +19,9 @@ func TestMessageHeader_Encode(t *testing.T) {
 	connect := Connect{MessageHeader: &header}
 
 	connect.Encode()
+
+	assert.Equal(t, int(Conf.Version)&0xf0, 0x30)
+
 }
 
 func TestMessageHeader_Decode(t *testing.T) {

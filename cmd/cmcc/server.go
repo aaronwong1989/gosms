@@ -52,8 +52,8 @@ func main() {
 func startMonitor(port int) {
 	go func() {
 		addr := strconv.Itoa(port + 1)
-		log.Infof("[pprof   ] http://localhost:%d/debug/pprof/", addr)
-		if err := http.ListenAndServe(addr, nil); err != nil {
+		log.Infof("[Pprof    ] http://localhost:%s/debug/pprof/", addr)
+		if err := http.ListenAndServe(":"+addr, nil); err != nil {
 			log.Infof("start pprof failed on %s", addr)
 		}
 	}()
@@ -330,17 +330,17 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *cmcc.Submit) func() {
 
 		// 发送状态报告
 		if resp.Result() == 0 {
-			_ = s.pool.Submit(reportAsyncSender(c, sub, processTime))
+			_ = s.pool.Submit(reportAsyncSender(c, sub, resp.MsgId(), processTime))
 		}
 	}
 }
 
-func reportAsyncSender(c gnet.Conn, sub *cmcc.Submit, wait time.Duration) func() {
+func reportAsyncSender(c gnet.Conn, sub *cmcc.Submit, msgId uint64, wait time.Duration) func() {
 	return func() {
 		if diceCheck(100) {
 			return
 		}
-		dly := sub.ToDeliveryReport()
+		dly := sub.ToDeliveryReport(msgId)
 		// 模拟状态报告发送前的耗时
 		processTime := wait + time.Duration(cmcc.Conf.FixReportRespMs)
 		time.Sleep(processTime * time.Millisecond)

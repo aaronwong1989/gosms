@@ -7,6 +7,7 @@ import (
 )
 
 func TestNewDelivery(t *testing.T) {
+	Conf.Version = 32
 	cases := []string{
 		"hello world",
 		"你好，世界。 hello world",

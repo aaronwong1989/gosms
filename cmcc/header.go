@@ -56,7 +56,7 @@ func TrimStr(bts []byte) string {
 }
 
 func V3() bool {
-	return Conf.Version&0xf0 == 3
+	return int(Conf.Version)&0xf0 == 0x30
 }
 
 const (

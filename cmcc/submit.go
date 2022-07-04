@@ -66,7 +66,7 @@ type Submit struct {
 
 func NewSubmit(phones []string, content string, opts ...Option) (messages []*Submit) {
 	options := loadOptions(opts...)
-	baseLen := 140
+	baseLen := 138
 	if V3() {
 		baseLen = 163
 	}
@@ -135,12 +135,12 @@ func (sub *Submit) Encode() []byte {
 	if V3() {
 		copy(frame[index:index+32], sub.feeTerminalId)
 		index += 32
+		frame[index] = sub.feeTerminalType
+		index++
 	} else {
 		copy(frame[index:index+21], sub.feeTerminalId)
 		index += 21
 	}
-	frame[index] = sub.feeTerminalType
-	index++
 	frame[index] = sub.tpPid
 	index++
 	frame[index] = sub.tpUdhi
@@ -163,8 +163,10 @@ func (sub *Submit) Encode() []byte {
 	index++
 	copy(frame[index:index+len(sub.termIds)], sub.termIds)
 	index += len(sub.termIds)
-	frame[index] = sub.destTerminalType
-	index++
+	if V3() {
+		frame[index] = sub.destTerminalType
+		index++
+	}
 	frame[index] = sub.msgLength
 	index++
 	copy(frame[index:index+len(sub.msgBytes)], sub.msgBytes)
@@ -198,12 +200,12 @@ func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
 	if V3() {
 		sub.feeTerminalId = TrimStr(frame[index : index+32])
 		index += 32
+		sub.feeTerminalType = frame[index]
+		index++
 	} else {
 		sub.feeTerminalId = TrimStr(frame[index : index+21])
 		index += 21
 	}
-	sub.feeTerminalType = frame[index]
-	index++
 	sub.tpPid = frame[index]
 	index++
 	sub.tpUdhi = frame[index]
@@ -230,8 +232,10 @@ func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
 	}
 	sub.destTerminalId = TrimStr(frame[index : index+l])
 	index += l
-	sub.destTerminalType = frame[index]
-	index++
+	if V3() {
+		sub.destTerminalType = frame[index]
+		index++
+	}
 	sub.msgLength = frame[index]
 	index++
 	content := frame[index : index+int(sub.msgLength)]
@@ -273,12 +277,14 @@ func (sub *Submit) ToResponse(result uint32) interface{} {
 	return resp
 }
 
-// TODO 支持3.0
-func (sub *Submit) ToDeliveryReport() *Delivery {
+func (sub *Submit) ToDeliveryReport(msgId uint64) *Delivery {
 	d := Delivery{}
 
 	head := *sub.MessageHeader
-	head.TotalLength = 169
+	head.TotalLength = 145
+	if V3() {
+		head.TotalLength = 169
+	}
 	head.CommandId = CMPP_DELIVER
 	d.MessageHeader = &head
 
@@ -291,7 +297,7 @@ func (sub *Submit) ToDeliveryReport() *Delivery {
 
 	subTime := time.Now().Format("0601021504")
 	doneTime := time.Now().Add(10 * time.Second).Format("0601021504")
-	report := NewReport(sub.msgId, sub.destTerminalId, subTime, doneTime)
+	report := NewReport(msgId, sub.destTerminalId, subTime, doneTime)
 	d.report = report
 
 	return &d
