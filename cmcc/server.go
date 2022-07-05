@@ -1,9 +1,5 @@
 package cmcc
 
-// export CMCC_CONF_PATH="/Users/huangzhonghui/.yaml"
-// export GNET_LOGGING_LEVEL=-1
-// export GNET_LOGGING_FILE="/Users/huangzhonghui/logs/sms.log"
-
 import (
 	"flag"
 	"fmt"
