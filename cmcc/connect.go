@@ -7,12 +7,16 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"sms-vgateway/logging"
 )
+
+var log = logging.GetDefaultLogger()
 
 type Connect struct {
 	*MessageHeader             // +12 = 12：消息头
 	sourceAddr          string // +6 = 18：源地址，此处为 SP_Id
-	authenticatorSource string // +16 = 34： 用于鉴别源地址。其值通过单向 MD5 hash 计算得出，表示如下: authenticatorSource = MD5(Source_Addr+9 字节的 0 +shared secret+timestamp) Shared secret 由中国移动与源地址实 体事先商定，timestamp 格式为: MMDDHHMMSS，即月日时分秒，10 位。
+	authenticatorSource []byte // +16 = 34： 用于鉴别源地址。其值通过单向 MD5 hash 计算得出，表示如下: authenticatorSource = MD5(Source_Addr+9 字节的 0 +shared secret+timestamp) Shared secret 由中国移动与源地址实 体事先商定，timestamp 格式为: MMDDHHMMSS，即月日时分秒，10 位。
 	version             uint8  // +1 = 35：双方协商的版本号(高位 4bit 表示主 版本号,低位 4bit 表示次版本号)，对 于3.0的版本，高4bit为3，低4位为 0
 	timestamp           uint32 // +4 = 39：时间戳的明文,由客户端产生,格式为 MMDDHHMMSS，即月日时分秒，10 位数字的整型，右对齐。
 }
@@ -26,11 +30,12 @@ func NewConnect() *Connect {
 	con.MessageHeader = header
 	con.version = Conf.Version
 	con.sourceAddr = Conf.SourceAddr
-	// 2006-1-2 15:04:05
 	ts, _ := strconv.ParseUint(time.Now().Format("0102150405"), 10, 32)
 	con.timestamp = uint32(ts)
+	// TODO TEST ONLY
+	// con.timestamp = uint32(705192634)
 	ss := reqAuthMd5(con)
-	con.authenticatorSource = string(ss[:])
+	con.authenticatorSource = ss[:]
 	return con
 }
 
@@ -52,7 +57,7 @@ func (connect *Connect) Decode(header *MessageHeader, frame []byte) error {
 	}
 	connect.MessageHeader = header
 	connect.sourceAddr = string(frame[0:6])
-	connect.authenticatorSource = string(frame[6:22])
+	connect.authenticatorSource = frame[6:22]
 	connect.version = frame[22]
 	connect.timestamp = binary.BigEndian.Uint32(frame[23:27])
 	return nil
@@ -68,8 +73,10 @@ func (connect *Connect) Check() uint32 {
 		return 4
 	}
 
-	authSource := []byte(connect.authenticatorSource)
+	authSource := connect.authenticatorSource
 	authMd5 := reqAuthMd5(connect)
+	log.Infof("[AuthCheck] input  : %x", authSource)
+	log.Infof("[AuthCheck] compute: %x", authMd5)
 	i := bytes.Compare(authSource, authMd5[:])
 	if i == 0 {
 		return 0
@@ -113,6 +120,7 @@ func reqAuthMd5(connect *Connect) [16]byte {
 	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	authDt = append(authDt, Conf.SharedSecret...)
 	authDt = append(authDt, fmt.Sprintf("%010d", connect.timestamp)...)
+	log.Infof("[AuthCheck] auth data: %x", authDt)
 	authMd5 := md5.Sum(authDt)
 	return authMd5
 }

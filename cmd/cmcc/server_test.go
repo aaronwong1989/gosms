@@ -26,6 +26,8 @@ var (
 
 	clients  = 1
 	duration = time.Second * 100
+	// addr = "10.211.55.13:9000"
+	addr = ":9000"
 )
 
 func TestClient(t *testing.T) {
@@ -45,8 +47,24 @@ func TestClient(t *testing.T) {
 	}()
 }
 
-func TestServer_HandleTerminate(t *testing.T) {
-	c, err := net.Dial("tcp", ":9000")
+func TestLogin(t *testing.T) {
+	c, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+	defer func(c net.Conn) {
+		err := c.Close()
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+	}(c)
+
+	login(t, c)
+}
+
+func TestTerminate(t *testing.T) {
+	c, err := net.Dial("tcp", addr)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
@@ -67,7 +85,7 @@ func TestServer_HandleTerminate(t *testing.T) {
 
 func runClient(t *testing.T, senders, receivers int) {
 	go func(t *testing.T) {
-		c, err := net.Dial("tcp", ":9000")
+		c, err := net.Dial("tcp", addr)
 		if err != nil {
 			t.Errorf("%v", err)
 			return
@@ -116,7 +134,6 @@ func runClient(t *testing.T, senders, receivers int) {
 
 func login(t *testing.T, c net.Conn) bool {
 	con := cmcc.NewConnect()
-	// con.authenticatorSource = "000000" // 反例测试
 	t.Logf(">>>: %s", con)
 	i, _ := c.Write(con.Encode())
 	assert.True(t, uint32(i) == con.TotalLength)

@@ -1,6 +1,8 @@
 package cmcc
 
 import (
+	"crypto/md5"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -20,7 +22,7 @@ func TestCmppConnect_Encode(t *testing.T) {
 	connect.version = 0x20
 	connect.timestamp = uint32(1001235010)
 	md5str := reqAuthMd5(connect)
-	connect.authenticatorSource = string(md5str[:])
+	connect.authenticatorSource = md5str[:]
 	t.Logf("%s", connect)
 
 	frame := connect.Encode()
@@ -40,4 +42,20 @@ func TestTime(t *testing.T) {
 	t.Logf("%T,%v", ts, ts)
 	ts32 := uint32(ts)
 	t.Logf("%T,%v", ts32, ts32)
+}
+
+func TestAuthStr(t *testing.T) {
+	ti := time.Now()
+	s := ti.Format("0102150405")
+	ts, _ := strconv.ParseUint(s, 10, 32)
+	t.Logf("%T, %v, %s", ts, ts, fmt.Sprintf("%010d", ts))
+
+	authDt := make([]byte, 0, 64)
+	authDt = append(authDt, Conf.SourceAddr...)
+	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+	authDt = append(authDt, Conf.SharedSecret...)
+	authDt = append(authDt, "0705192634"...)
+	authMd5 := md5.Sum(authDt)
+
+	t.Logf("%x", authMd5)
 }

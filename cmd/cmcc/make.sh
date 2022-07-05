@@ -9,7 +9,9 @@
 # 如果你想在Linux 32位系统下运行
 # CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -trimpath
 # 如果你想在Linux 64位系统下运行
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath
+# CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath
+# 如果你想在Linux arm64系统下运行
+# CGO_ENABLED=0 GOOS=linux GOARM=7 GOARCH=arm64 go build -trimpath
 # 如果你想在 本机环境 运行
 # go build -trimpath
 

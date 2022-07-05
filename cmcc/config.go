@@ -1,7 +1,6 @@
 package cmcc
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -47,8 +46,8 @@ type Config struct {
 func init() {
 	path := os.Getenv("CMCC_CONF_PATH")
 	if len(path) == 0 {
-		pwd, _ := os.Getwd()
-		path = fmt.Sprintf("%s%s%s", pwd, "/", "cmcc.yaml")
+		// TODO define your default fallback path
+		path = "/Users/huangzhonghui/GolandProjects/sms-vgateway/cmd/cmcc/cmcc.yaml"
 	}
 	logging.Infof("[Conf     ] path=%s", path)
 	config, err := ioutil.ReadFile(path)
@@ -57,6 +56,7 @@ func init() {
 		return
 	}
 	err = yaml.Unmarshal(config, &Conf)
+	log.Infof("[Conf     ] %+v", Conf)
 	if err != nil {
 		panic(err)
 		return
