@@ -7,4 +7,4 @@ go build -trimpath
 
 mv cmcc ~/smsvg/
 cp -f cmcc.yaml ~/.cmcc.yaml
-
+cp -f cmcc.yaml ../../cmcc.yaml

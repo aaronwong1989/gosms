@@ -1,11 +1,14 @@
 package cmcc
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"sms-vgateway/logging"
 )
 
 var Conf Config
@@ -44,8 +47,10 @@ type Config struct {
 func init() {
 	path := os.Getenv("CMCC_CONF_PATH")
 	if len(path) == 0 {
-		path = "/Users/huangzhonghui/.cmcc.yaml"
+		pwd, _ := os.Getwd()
+		path = fmt.Sprintf("%s%s%s", pwd, "/", "cmcc.yaml")
 	}
+	logging.Infof("[Conf     ] path=%s", path)
 	config, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)

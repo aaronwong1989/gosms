@@ -42,8 +42,11 @@ func main() {
 		window:           make(chan struct{}, cmcc.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
 
+	rand.Seed(time.Now().Unix()) // 随机种子
+
 	startMonitor(port)
 	log.Infof("[Conf     ] %+v", cmcc.Conf)
+
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
 }
@@ -456,7 +459,6 @@ func (s *Server) activeCons() int {
 }
 
 func randNum(min, max int32) int {
-	rand.Seed(time.Now().Unix()) // 随机种子
 	return rand.Intn(int(max-min)) + int(min)
 }
 
