@@ -7,3 +7,6 @@ go build -trimpath
 
 mv cmcc ~/smsvg/
 cp -f cmcc.yaml ~/.cmcc.yaml
+
+cd ~/GolandProjects/sms-vgateway/cmcc
+go test server_test.go -c

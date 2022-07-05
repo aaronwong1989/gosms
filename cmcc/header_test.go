@@ -20,7 +20,7 @@ func TestMessageHeader_Encode(t *testing.T) {
 
 	connect.Encode()
 
-	assert.Equal(t, int(Conf.Version)&0xf0, 0x30)
+	assert.Equal(t, int(Conf.Version)&0xf0, 0x20)
 
 }
 

@@ -21,28 +21,39 @@ var (
 	counterRt int64
 	counterAt int64
 	wg        sync.WaitGroup
+	mtChan    = make(chan struct{}, 1)
+	dlyChan   = make(chan struct{}, 1)
+	readChan  = make(chan struct{}, 1)
+	termChan  = make(chan struct{})
 
 	clients  = 1
-	duration = time.Second * 100
+	duration = time.Second * 10
 	// addr = "10.211.55.13:9000"
 	addr = ":9000"
 )
 
 func TestClient(t *testing.T) {
-	senders := 1
-	receivers := 1
 	wg.Add(1)
-
-	for i := 0; i < clients; i++ {
-		runClient(t, senders, receivers)
-	}
-	time.Sleep(duration)
-	logResult(t)
-
 	defer func() {
 		pool.Release()
-		wg.Done()
+		logResult(t)
 	}()
+
+	for i := 0; i < clients; i++ {
+		runClient(t)
+	}
+	time.Sleep(duration)
+
+	// 停掉发送
+	dlyChan <- struct{}{}
+	mtChan <- struct{}{}
+	// 停掉接收
+	time.Sleep(100 * time.Millisecond)
+	readChan <- struct{}{}
+	time.Sleep(100 * time.Millisecond)
+	// 发送断开连接报文
+	wg.Done()
+	<-termChan
 }
 
 func TestLogin(t *testing.T) {
@@ -81,7 +92,7 @@ func TestTerminate(t *testing.T) {
 	terminate(t, c)
 }
 
-func runClient(t *testing.T, senders, receivers int) {
+func runClient(t *testing.T) {
 	go func(t *testing.T) {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
@@ -98,34 +109,45 @@ func runClient(t *testing.T, senders, receivers int) {
 		if !login(t, c) {
 			return
 		}
-		time.Sleep(time.Millisecond * 10)
 
-		for i := 0; i < senders; i++ {
-			_ = pool.Submit(func() {
-				for b := true; b; {
-					b = sendMt(t, c)
-				}
-			})
-		}
-
-		for i := 0; i < receivers; i++ {
-			_ = pool.Submit(func() {
-				for b := true; b; {
-					b = readResp(t, c)
-				}
-			})
-		}
-
-		// 上行短信发送
 		_ = pool.Submit(func() {
-			for b := true; b; {
-				b = sendDelivery(t, c)
-				time.Sleep(time.Millisecond * 100)
+			for s := true; s; {
+				select {
+				case <-mtChan:
+					s = false
+					t.Logf("接收到 mtChan 的停止信号")
+				default:
+					s = sendMt(t, c)
+				}
+			}
+		})
+
+		_ = pool.Submit(func() {
+			for s := true; s; {
+				select {
+				case <-dlyChan:
+					s = false
+					t.Logf("接收到 dlyChan 的停止信号")
+				default:
+					s = sendDelivery(t, c)
+					time.Sleep(time.Millisecond * 50)
+				}
+			}
+		})
+
+		_ = pool.Submit(func() {
+			for s := true; s; {
+				select {
+				case <-readChan:
+					s = false
+					t.Logf("接收到 readChan 的停止信号")
+				default:
+					s = readResp(t, c)
+				}
 			}
 		})
 
 		wg.Wait()
-
 		terminate(t, c)
 	}(t)
 }
@@ -272,4 +294,6 @@ func terminate(t *testing.T, c net.Conn) {
 		t.Errorf("%v", err)
 	}
 	t.Logf("<<< %s", term)
+
+	termChan <- struct{}{}
 }
