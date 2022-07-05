@@ -24,7 +24,7 @@ var (
 	counterAt int64
 	wg        sync.WaitGroup
 
-	clients  = 3
+	clients  = 1
 	duration = time.Second * 100
 )
 

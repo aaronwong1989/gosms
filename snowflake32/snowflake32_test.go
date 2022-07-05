@@ -16,3 +16,7 @@ func TestTimeStamp(t *testing.T) {
 	t.Logf("uint32 seq: %d", seq)
 	t.Logf("uint32 seq: %d", snow.NextVal())
 }
+
+func Benchmark_passedSeconds(t *testing.B) {
+	passedSeconds()
+}

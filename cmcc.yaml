@@ -34,8 +34,8 @@ default-valid-duration: 2h
 # 95  表示 95%
 # 99  表示 99%
 # 999 表示 99.9%
-success-rate: 999
+success-rate: 965
 # Mt响应的最大与最小时间，状态报告在fix-report-resp-ms后发送
 min-submit-resp-ms: 1
 max-submit-resp-ms: 3
-fix-report-resp-ms: 10
+fix-report-resp-ms: 5
