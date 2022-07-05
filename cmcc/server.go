@@ -36,7 +36,7 @@ type Server struct {
 func StartServer() {
 	var port int
 	var multicore bool
-	// Example command: go run gateway.go --port 9000 --multicore=true
+	// Example command: go run server.go --port 9000 --multicore=true
 	flag.IntVar(&port, "port", 9000, "--port 9000")
 	flag.BoolVar(&multicore, "multicore", true, "--multicore=true")
 	flag.Parse()
