@@ -43,7 +43,7 @@ func main() {
 	}
 
 	startMonitor(port)
-
+	log.Infof("[Conf     ] %+v", cmcc.Conf)
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
 }
