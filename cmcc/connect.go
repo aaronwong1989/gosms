@@ -7,11 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
-
-	"sms-vgateway/logging"
 )
-
-var log = logging.GetDefaultLogger()
 
 type Connect struct {
 	*MessageHeader             // +12 = 12：消息头

@@ -1,4 +1,4 @@
-package main
+package cmcc
 
 import (
 	"bufio"
@@ -13,8 +13,6 @@ import (
 
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 	"github.com/stretchr/testify/assert"
-
-	"sms-vgateway/cmcc"
 )
 
 var (
@@ -133,26 +131,26 @@ func runClient(t *testing.T, senders, receivers int) {
 }
 
 func login(t *testing.T, c net.Conn) bool {
-	con := cmcc.NewConnect()
+	con := NewConnect()
 	t.Logf(">>>: %s", con)
 	i, _ := c.Write(con.Encode())
 	assert.True(t, uint32(i) == con.TotalLength)
 
 	pl := 30
-	if cmcc.V3() {
+	if V3() {
 		pl = 33
 	}
 	resp := make([]byte, pl)
 	i, _ = c.Read(resp)
 	assert.True(t, i == pl)
 
-	header := &cmcc.MessageHeader{}
+	header := &MessageHeader{}
 	err := header.Decode(resp)
 	if err != nil {
 		return false
 	}
-	rep := &cmcc.ConnectResp{}
-	err = rep.Decode(header, resp[cmcc.HEAD_LENGTH:])
+	rep := &ConnectResp{}
+	err = rep.Decode(header, resp[HEAD_LENGTH:])
 	if err != nil {
 		return false
 	}
@@ -161,7 +159,7 @@ func login(t *testing.T, c net.Conn) bool {
 }
 
 func sendMt(t *testing.T, c net.Conn) bool {
-	mts := cmcc.NewSubmit([]string{"13100001111"}, fmt.Sprintf("hello world! %d", rand.Uint64()))
+	mts := NewSubmit([]string{"13100001111"}, fmt.Sprintf("hello world! %d", rand.Uint64()))
 	mt := mts[0]
 	_, err := c.Write(mt.Encode())
 	if err != nil {
@@ -179,7 +177,7 @@ func readResp(t *testing.T, c net.Conn) bool {
 		t.Errorf("%v", err)
 		return false
 	}
-	header := &cmcc.MessageHeader{}
+	header := &MessageHeader{}
 	_ = header.Decode(bytes)
 	l := int(header.TotalLength - 12)
 	bytes = make([]byte, l)
@@ -188,8 +186,8 @@ func readResp(t *testing.T, c net.Conn) bool {
 		t.Errorf("%v", err)
 		return false
 	}
-	if header.CommandId == cmcc.CMPP_SUBMIT_RESP {
-		csr := &cmcc.SubmitResp{}
+	if header.CommandId == CMPP_SUBMIT_RESP {
+		csr := &SubmitResp{}
 		err := csr.Decode(header, bytes)
 		if err != nil {
 			t.Errorf("%v", err)
@@ -198,8 +196,8 @@ func readResp(t *testing.T, c net.Conn) bool {
 			atomic.AddInt64(&counterMt, 1)
 			t.Logf("<<< %s", csr)
 		}
-	} else if header.CommandId == cmcc.CMPP_DELIVER {
-		dly := &cmcc.Delivery{}
+	} else if header.CommandId == CMPP_DELIVER {
+		dly := &Delivery{}
 		err := dly.Decode(header, bytes)
 		if err != nil {
 			t.Errorf("%v", err)
@@ -211,10 +209,10 @@ func readResp(t *testing.T, c net.Conn) bool {
 			}
 			t.Logf("<<< %s", dly)
 		}
-	} else if header.CommandId == cmcc.CMPP_ACTIVE_TEST {
-		at := cmcc.ActiveTest{MessageHeader: header}
+	} else if header.CommandId == CMPP_ACTIVE_TEST {
+		at := ActiveTest{MessageHeader: header}
 		t.Logf("<<< %s", at)
-		ats := at.ToResponse(0).(*cmcc.ActiveTestResp)
+		ats := at.ToResponse(0).(*ActiveTestResp)
 		_, err = c.Write(ats.Encode())
 		if err != nil {
 			t.Errorf("%v", err)
@@ -230,7 +228,7 @@ func readResp(t *testing.T, c net.Conn) bool {
 }
 
 func sendDelivery(t *testing.T, c net.Conn) bool {
-	dly := cmcc.NewDelivery("13700001111", "hello word 中国", "", "")
+	dly := NewDelivery("13700001111", "hello word 中国", "", "")
 	_, err := c.Write(dly.Encode())
 	if err != nil {
 		t.Errorf("%v", err)
@@ -256,7 +254,7 @@ func logResult(t *testing.T) {
 }
 
 func terminate(t *testing.T, c net.Conn) {
-	term := cmcc.NewTerminate()
+	term := NewTerminate()
 	_, err := c.Write(term.Encode())
 	if err != nil {
 		t.Errorf("%v", err)
