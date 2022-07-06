@@ -109,7 +109,7 @@ func runClient(t *testing.T) {
 		}(c)
 
 		if !login(t, c) {
-			return
+			panic("登录失败，程序退出!")
 		}
 
 		_ = pool.Submit(func() {

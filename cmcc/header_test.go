@@ -48,3 +48,8 @@ func TestStringRune(t *testing.T) {
 	t.Logf("bts: %x", bts)
 	t.Logf("chars: %c", chars)
 }
+
+func TestTrimStr(t *testing.T) {
+	bts := []byte{'a', 'b', 'c', 'd', 0, 0, 0}
+	t.Logf("%s", TrimStr(bts))
+}

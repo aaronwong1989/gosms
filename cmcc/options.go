@@ -34,6 +34,13 @@ type MtOptions struct {
 	LinkID          string
 }
 
+// WithOptions 设置配置项
+func WithOptions(opt *MtOptions) Option {
+	return func(mtOps *MtOptions) {
+		mtOps = opt
+	}
+}
+
 // MtFeeTerminalType 被计费用户的号码类型，0：真实号码；1：伪码
 func MtFeeTerminalType(t uint8) Option {
 	if t != 0 && t != 1 {

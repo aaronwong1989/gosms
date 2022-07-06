@@ -281,13 +281,13 @@ func (sub *Submit) ToDeliveryReport(msgId uint64) *Delivery {
 	d := Delivery{}
 
 	head := *sub.MessageHeader
-	head.TotalLength = 145
-	if V3() {
-		head.TotalLength = 169
-	}
-	head.CommandId = CMPP_DELIVER
-	head.SequenceId = uint32(Sequence32.NextVal())
 	d.MessageHeader = &head
+	d.TotalLength = 145
+	if V3() {
+		d.TotalLength = 169
+	}
+	d.CommandId = CMPP_DELIVER
+	d.SequenceId = uint32(Sequence32.NextVal())
 
 	d.registeredDelivery = 1
 	d.msgLength = 60

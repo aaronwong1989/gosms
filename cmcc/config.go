@@ -23,6 +23,7 @@ type Config struct {
 	DataCenterId       int32         `yaml:"datacenter-id"`
 	WorkerId           int32         `yaml:"worker-id"`
 	ReceiveWindowSize  int           `yaml:"receive-window-size"`
+	MaxPoolSize        int           `yaml:"max-pool-size"`
 
 	// MT消息相关
 	RegisteredDel   uint8         `yaml:"need-report"`

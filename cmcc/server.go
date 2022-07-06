@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/panjf2000/ants/v2"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 
@@ -37,7 +38,17 @@ func StartServer() {
 	flag.BoolVar(&multicore, "multicore", true, "--multicore=true")
 	flag.Parse()
 
-	pool := goroutine.Default()
+	// 定义异步工作Go程池
+	options := ants.Options{
+		ExpiryDuration:   time.Minute,      // 1 分钟内不被使用的worker会被清除
+		Nonblocking:      false,            // 如果为true,worker池满了后提交任务会直接返回nil
+		MaxBlockingTasks: Conf.MaxPoolSize, // blocking模式有效，否则worker池满了后提交任务会直接返回nil
+		PreAlloc:         false,
+		PanicHandler: func(e interface{}) {
+			log.Errorf("%v", e)
+		},
+	}
+	pool, _ := ants.NewPool(Conf.MaxPoolSize, ants.WithOptions(options))
 	defer pool.Release()
 
 	ss := &Server{

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"unsafe"
 
 	"sms-vgateway/snowflake"
 	"sms-vgateway/snowflake32"
@@ -52,7 +53,8 @@ func TrimStr(bts []byte) string {
 			break
 		}
 	}
-	return string(bts[0:i])
+	ns := bts[:i]
+	return *(*string)(unsafe.Pointer(&ns))
 }
 
 func V3() bool {
