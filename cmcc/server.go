@@ -1,11 +1,13 @@
 package cmcc
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -38,6 +40,7 @@ func StartServer() {
 	flag.BoolVar(&multicore, "multicore", true, "--multicore=true")
 	flag.Parse()
 
+	SavePid("cmcc.pid")
 	// 定义异步工作Go程池
 	options := ants.Options{
 		ExpiryDuration:   time.Minute,      // 1 分钟内不被使用的worker会被清除
@@ -474,4 +477,22 @@ func randNum(min, max int32) int {
 // 当前时间尾数与给定数相同时返回true
 func diceCheck(prob int32) bool {
 	return time.Now().Unix()%int64(prob) == 0
+}
+
+// SavePid 在程序执行的当前目录生成pid文件
+func SavePid(f string) string {
+	file, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		log.Errorf("%v", err)
+	}
+	pid := fmt.Sprintf("%d", os.Getpid())
+
+	writer := bufio.NewWriter(file)
+	_, _ = writer.WriteString(pid)
+	defer func(file *os.File, writer *bufio.Writer) {
+		_ = writer.Flush()
+		_ = file.Close()
+	}(file, writer)
+
+	return pid
 }

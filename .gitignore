@@ -17,6 +17,7 @@
 .idea
 test.result.txt
 .DS_Store
+*.pid
 
 cmd/cmcc/cmcc
 cmd/cmcc/cmcc.tar
