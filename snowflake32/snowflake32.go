@@ -43,6 +43,7 @@ func (s *Snowflake) NextVal() int32 {
 			// 如果当前序列超出9bit长度，则需要等待下一秒
 			// 下一秒将使用sequence:0
 			for now <= s.seconds {
+				time.Sleep(time.Microsecond)
 				now = passedSeconds()
 			}
 		}

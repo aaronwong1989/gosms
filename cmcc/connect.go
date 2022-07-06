@@ -71,8 +71,8 @@ func (connect *Connect) Check() uint32 {
 
 	authSource := connect.authenticatorSource
 	authMd5 := reqAuthMd5(connect)
-	log.Infof("[AuthCheck] input  : %x", authSource)
-	log.Infof("[AuthCheck] compute: %x", authMd5)
+	log.Debugf("[AuthCheck] input  : %x", authSource)
+	log.Debugf("[AuthCheck] compute: %x", authMd5)
 	i := bytes.Compare(authSource, authMd5[:])
 	if i == 0 {
 		return 0
@@ -116,7 +116,7 @@ func reqAuthMd5(connect *Connect) [16]byte {
 	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	authDt = append(authDt, Conf.SharedSecret...)
 	authDt = append(authDt, fmt.Sprintf("%010d", connect.timestamp)...)
-	log.Infof("[AuthCheck] auth data: %x", authDt)
+	log.Debugf("[AuthCheck] auth data: %x", authDt)
 	authMd5 := md5.Sum(authDt)
 	return authMd5
 }

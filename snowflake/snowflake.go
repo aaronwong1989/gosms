@@ -43,6 +43,7 @@ func (s *Snowflake) NextVal() int64 {
 			// 如果当前序列超出12bit长度，则需要等待下一毫秒
 			// 下一毫秒将使用sequence:0
 			for now <= s.timestamp {
+				time.Sleep(time.Nanosecond)
 				now = time.Now().UnixNano() / 1000000
 			}
 		}

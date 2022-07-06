@@ -1,5 +1,7 @@
 #!/bin/sh
 
+go clean
+go mod tidy
 # 在该文件所处当前目录执行（cmd/cmcc 目录）
 
 # 如果你想在Windows 32位系统下运行
