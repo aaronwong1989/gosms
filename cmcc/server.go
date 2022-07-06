@@ -40,7 +40,7 @@ func StartServer() {
 	flag.BoolVar(&multicore, "multicore", true, "--multicore=true")
 	flag.Parse()
 
-	SavePid("cmcc.pid")
+	log.Infof("current pid is %s.", SavePid("cmcc.pid"))
 	// 定义异步工作Go程池
 	options := ants.Options{
 		ExpiryDuration:   time.Minute,      // 1 分钟内不被使用的worker会被清除

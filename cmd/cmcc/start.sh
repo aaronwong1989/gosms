@@ -14,4 +14,6 @@ mkdir -p /Users/huangzhonghui/smsvg/logs
 # default  args --port 9000 --multicore=true
 nohup ./cmcc &
 
-tail -f /Users/huangzhonghui/smsvg/logs/sms.log
+sleep 1
+tail -10 /Users/huangzhonghui/smsvg/logs/sms.log
+top -pid "$(cat cmcc.pid)"
