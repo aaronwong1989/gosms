@@ -286,6 +286,7 @@ func (sub *Submit) ToDeliveryReport(msgId uint64) *Delivery {
 		head.TotalLength = 169
 	}
 	head.CommandId = CMPP_DELIVER
+	head.SequenceId = uint32(Sequence32.NextVal())
 	d.MessageHeader = &head
 
 	d.registeredDelivery = 1

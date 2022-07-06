@@ -74,7 +74,8 @@ func (connect *Connect) Check() uint32 {
 	log.Debugf("[AuthCheck] input  : %x", authSource)
 	log.Debugf("[AuthCheck] compute: %x", authMd5)
 	i := bytes.Compare(authSource, authMd5[:])
-	if i == 0 {
+	// 配置不做校验或校验通过时返回0
+	if !Conf.AuthCheck || i == 0 {
 		return 0
 	}
 	return 3

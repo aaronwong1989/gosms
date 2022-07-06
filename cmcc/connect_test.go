@@ -51,10 +51,10 @@ func TestAuthStr(t *testing.T) {
 	t.Logf("%T, %v, %s", ts, ts, fmt.Sprintf("%010d", ts))
 
 	authDt := make([]byte, 0, 64)
-	authDt = append(authDt, Conf.SourceAddr...)
+	authDt = append(authDt, "901234"...)
 	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-	authDt = append(authDt, Conf.SharedSecret...)
-	authDt = append(authDt, "0705192634"...)
+	authDt = append(authDt, "1234"...)
+	authDt = append(authDt, "0706104024"...)
 	authMd5 := md5.Sum(authDt)
 
 	t.Logf("%x", authMd5)
