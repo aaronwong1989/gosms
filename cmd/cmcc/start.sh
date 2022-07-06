@@ -12,8 +12,9 @@ mkdir -p /Users/huangzhonghui/smsvg/logs
 
 # optional args --port 1234 --multicore=false
 # default  args --port 9000 --multicore=true
-nohup ./cmcc &
+nohup ./cmcc --port 9000 --multicore=true >panic.log 2>&1 &
 
-sleep 1
+sleep 3
 tail -10 /Users/huangzhonghui/smsvg/logs/sms.log
+sleep 7
 top -pid "$(cat cmcc.pid)"
