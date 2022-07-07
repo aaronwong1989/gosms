@@ -80,7 +80,7 @@ func (lo *Login) String() string {
 
 func (lo *Login) Check() uint32 {
 	if lo.version > Conf.Version {
-		return 4
+		return 22
 	}
 
 	authSource := lo.authenticatorClient
@@ -92,7 +92,7 @@ func (lo *Login) Check() uint32 {
 	if !Conf.AuthCheck || i == 0 {
 		return 0
 	}
-	return 3
+	return 21
 }
 
 func (lo *Login) ToResponse(code uint32) interface{} {
