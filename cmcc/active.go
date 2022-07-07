@@ -25,9 +25,9 @@ func (at *ActiveTest) Decode(header *MessageHeader, frame []byte) error {
 	return nil
 }
 
-func (at *ActiveTest) ToResponse(code uint32) interface{} {
+func (at *ActiveTest) ToResponse(_ uint32) interface{} {
 	header := &MessageHeader{TotalLength: HEAD_LENGTH + 1, CommandId: CMPP_ACTIVE_TEST_RESP, SequenceId: at.SequenceId}
-	atr := ActiveTestResp{MessageHeader: header, reserved: byte(code)}
+	atr := ActiveTestResp{MessageHeader: header, reserved: 0}
 	return &atr
 }
 

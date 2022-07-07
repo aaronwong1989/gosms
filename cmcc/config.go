@@ -1,6 +1,7 @@
 package cmcc
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"time"
@@ -8,13 +9,18 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"sms-vgateway/logging"
+	"sms-vgateway/snowflake"
+	"sms-vgateway/snowflake32"
 )
 
 var Conf Config
+var ErrorPacket = errors.New("error packet")
+var Sequence32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
+var Sequence64 = snowflake.NewSnowflake(int64(Conf.DataCenterId), int64(Conf.WorkerId))
 
 type Config struct {
 	// 公共参数
-	SourceAddr         string        `yaml:"sp-id"`
+	SourceAddr         string        `yaml:"source-addr"`
 	SharedSecret       string        `yaml:"shared-secret"`
 	AuthCheck          bool          `yaml:"auth-check"`
 	Version            uint8         `yaml:"version"`

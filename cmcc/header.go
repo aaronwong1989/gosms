@@ -2,18 +2,9 @@ package cmcc
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"unsafe"
-
-	"sms-vgateway/snowflake"
-	"sms-vgateway/snowflake32"
 )
-
-var ErrorPacket = errors.New("error packet")
-
-var Sequence32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
-var Sequence64 = snowflake.NewSnowflake(int64(Conf.DataCenterId), int64(Conf.WorkerId))
 
 type MessageHeader struct {
 	TotalLength uint32
@@ -43,7 +34,7 @@ func (header *MessageHeader) Decode(frame []byte) error {
 }
 
 func (header *MessageHeader) String() string {
-	return fmt.Sprintf("{ TotalLength: %d, CommandId: %s, SequenceId: %d }", header.TotalLength, CommandMap[header.CommandId], header.SequenceId)
+	return fmt.Sprintf("{ PacketLength: %d, RequestId: %s, SequenceId: %d }", header.TotalLength, CommandMap[header.CommandId], header.SequenceId)
 }
 
 func TrimStr(bts []byte) string {

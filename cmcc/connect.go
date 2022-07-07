@@ -17,6 +17,13 @@ type Connect struct {
 	timestamp           uint32 // +4 = 39：时间戳的明文,由客户端产生,格式为 MMDDHHMMSS，即月日时分秒，10 位数字的整型，右对齐。
 }
 
+type ConnectResp struct {
+	*MessageHeader           // 协议头, 12字节
+	status            uint32 // 状态码，3.0版本4字节，2.0版本1字节
+	authenticatorISMG []byte // 认证串，16字节
+	version           uint8  // 版本，1字节
+}
+
 func NewConnect() *Connect {
 	con := &Connect{}
 	header := &MessageHeader{}
@@ -104,7 +111,7 @@ func (connect *Connect) ToResponse(code uint32) interface{} {
 	authDt = append(authDt, connect.authenticatorSource...)
 	authDt = append(authDt, Conf.SharedSecret...)
 	auth := md5.Sum(authDt)
-	response.authenticatorISMG = string(auth[:])
+	response.authenticatorISMG = auth[:]
 	response.version = Conf.Version
 	return response
 }
@@ -120,13 +127,6 @@ func reqAuthMd5(connect *Connect) [16]byte {
 	log.Debugf("[AuthCheck] auth data: %x", authDt)
 	authMd5 := md5.Sum(authDt)
 	return authMd5
-}
-
-type ConnectResp struct {
-	*MessageHeader           // 协议头, 12字节
-	status            uint32 // 状态码，3.0版本4字节，2.0版本1字节
-	authenticatorISMG string // 认证串，16字节
-	version           uint8  // 版本，1字节
 }
 
 func (resp *ConnectResp) Encode() []byte {
@@ -166,7 +166,7 @@ func (resp *ConnectResp) Decode(header *MessageHeader, frame []byte) error {
 		resp.status = uint32(frame[0])
 		index = 1
 	}
-	resp.authenticatorISMG = string(frame[index : index+16])
+	resp.authenticatorISMG = frame[index : index+16]
 	index += 16
 	resp.version = frame[index]
 	return nil

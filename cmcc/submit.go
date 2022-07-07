@@ -8,6 +8,8 @@ import (
 
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
+
+	"sms-vgateway/tool"
 )
 
 // Submit
@@ -71,47 +73,48 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 		baseLen = 163
 	}
 	header := &MessageHeader{TotalLength: uint32(baseLen), CommandId: CMPP_SUBMIT, SequenceId: uint32(Sequence32.NextVal())}
-	submit := &Submit{MessageHeader: header}
+	mt := &Submit{MessageHeader: header}
 
-	setOptions(submit, options)
-	submit.msgFmt = MsgFmt(content)
+	setOptions(mt, options)
+	mt.msgFmt = MsgFmt(content)
 
-	submit.destUsrTl = uint8(len(phones))
-	submit.destTerminalId = strings.Join(phones, ",")
+	mt.destUsrTl = uint8(len(phones))
+	mt.destTerminalId = strings.Join(phones, ",")
 	idLen := 21
 	if V3() {
 		idLen = 32
 	}
-	termIds := make([]byte, idLen*int(submit.destUsrTl))
+	termIds := make([]byte, idLen*int(mt.destUsrTl))
 	for i, p := range phones {
 		copy(termIds[i*idLen:(i+1)*idLen], p)
 	}
-	submit.termIds = termIds
+	mt.termIds = termIds
 
-	submit.msgSrc = Conf.SourceAddr
+	mt.msgSrc = Conf.SourceAddr
 
-	submit.msgContent = content
-	slices := MsgSlices(submit.msgFmt, content)
+	mt.msgContent = content
+	slices := MsgSlices(mt.msgFmt, content)
 
 	if len(slices) == 1 {
-		submit.pkTotal = 1
-		submit.pkNumber = 1
-		submit.msgLength = uint8(len(slices[0]))
-		submit.msgBytes = slices[0]
-		submit.TotalLength = uint32(baseLen + len(termIds) + len(slices[0]))
-		return []*Submit{submit}
+		mt.pkTotal = 1
+		mt.pkNumber = 1
+		mt.msgLength = uint8(len(slices[0]))
+		mt.msgBytes = slices[0]
+		mt.TotalLength = uint32(baseLen + len(termIds) + len(slices[0]))
+		return []*Submit{mt}
 	} else {
-		submit.tpUdhi = 1
-		submit.pkTotal = uint8(len(slices))
+		mt.tpUdhi = 1
+		mt.pkTotal = uint8(len(slices))
 
 		for i, msgBytes := range slices {
-			// 拷贝 submit
-			tmp := *submit
+			// 拷贝 mt
+			tmp := *mt
 			tmpHead := *tmp.MessageHeader
 			sub := &tmp
 			sub.MessageHeader = &tmpHead
-
-			sub.SequenceId = uint32(Sequence32.NextVal())
+			if i != 0 {
+				sub.SequenceId = uint32(Sequence32.NextVal())
+			}
 			sub.pkNumber = uint8(i + 1)
 			sub.msgLength = uint8(len(msgBytes))
 			sub.msgBytes = msgBytes
@@ -342,55 +345,13 @@ func MsgSlices(fmt uint8, content string) (slices [][]byte) {
 	// 含中文
 	if fmt == 8 {
 		msgBytes = ucs2Encode(content)
-		if len(msgBytes) <= 140 {
-			slices = [][]byte{msgBytes}
-		} else {
-			slices = toTpUdhiSlices(msgBytes, 140)
-		}
+		slices = tool.ToTPUDHISlices(msgBytes, 140)
 	} else {
 		// 纯英文
 		msgBytes = []byte(content)
-		if len(msgBytes) <= 160 {
-			slices = [][]byte{msgBytes}
-		} else {
-			slices = toTpUdhiSlices(msgBytes, 160)
-		}
+		slices = tool.ToTPUDHISlices(msgBytes, 160)
 	}
 	return
-}
-
-// 拆分为长短信切片
-// 纯ASCII内容的拆分 pkgLen = 160
-// 含中文内容的拆分   pkgLen = 140
-func toTpUdhiSlices(content []byte, pkgLen int) (rt [][]byte) {
-	headLen := 6
-	bodyLen := pkgLen - headLen
-	parts := len(content) / bodyLen
-	tailLen := len(content) % bodyLen
-	if tailLen != 0 {
-		parts++
-	}
-	// 分片消息组的标识，用于收集组装消息
-	groupId := byte(time.Now().UnixNano() & 0xff)
-	var part []byte
-	for i := 0; i < parts; i++ {
-		if i != parts-1 {
-			part = make([]byte, pkgLen)
-		} else {
-			// 最后一片
-			part = make([]byte, 6+tailLen)
-		}
-		part[0], part[1], part[2] = 0x05, 0x00, 0x03
-		part[3] = groupId
-		part[4], part[5] = byte(parts), byte(i+1)
-		if i != parts-1 {
-			copy(part[6:pkgLen], content[bodyLen*i:bodyLen*(i+1)])
-		} else {
-			copy(part[6:], content[0:tailLen])
-		}
-		rt = append(rt, part)
-	}
-	return rt
 }
 
 // Encode to UCS2.
