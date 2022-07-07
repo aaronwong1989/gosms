@@ -1,11 +1,11 @@
 ### 网关参数 ###
-# 即SourceAddr，目前仅支持模拟单一值
-source-addr: "123456"
+# 目前仅支持模拟单一值
+client-id: "123456"
 shared-secret: "shared secret"
 # 是否校验登录，如果登录如法验证通过，设置未false
 auth-check: false
 # 见CMPP协议，48表示3.0 即 0x30 = 0011 0000
-version: 32
+version: 48
 # 最大连接数
 max-cons: 10
 # 心跳报文发送间隔
@@ -22,13 +22,13 @@ max-pool-size: 2048
 ### 以下为MT发送相关参数 ###
 sms-display-no: 95566
 need-report: 1
-default-msg-level: 9
+# 消息优先级 0-3
+priority: 3
 service-id: myService
-fee-user-type: 2
-fee-terminal-type:
-fee-terminal-id:
 fee-type: 05
 fee-code: free
+charge-term-id: 95566
+fixed-fee:
 link-id:
 # 短信默认有效期，超过下面配置时长后，如果消息未发送，则不再发送
 default-valid-duration: 2h
