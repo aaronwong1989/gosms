@@ -30,21 +30,22 @@ const (
 )
 
 func NewLogin() *Login {
-	con := &Login{}
+	lo := &Login{}
 	header := &MessageHeader{}
 	header.PacketLength = LoginLen
 	header.RequestId = CmdLogin
 	header.SequenceId = uint32(Sequence32.NextVal())
-	con.MessageHeader = header
-	con.clientID = Conf.clientId
-	con.loginMode = 2
+	lo.MessageHeader = header
+	lo.clientID = Conf.ClientId
+	lo.loginMode = 2
 	ts, _ := strconv.ParseUint(time.Now().Format("0102150405"), 10, 32)
-	con.timestamp = uint32(ts)
+	lo.timestamp = uint32(ts)
 	// TODO TEST ONLY
-	// con.timestamp = uint32(705192634)
-	ss := reqAuthMd5(con)
-	con.authenticatorClient = ss[:]
-	return con
+	// lo.timestamp = uint32(705192634)
+	ss := reqAuthMd5(lo)
+	lo.authenticatorClient = ss[:]
+	lo.version = Conf.Version
+	return lo
 }
 
 func (lo *Login) Encode() []byte {
@@ -74,7 +75,7 @@ func (lo *Login) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (lo *Login) String() string {
-	return fmt.Sprintf("{ Header: %s, clientID: %s, authenticatorClient: %x, logoinMode: %x, timestamp: %010d, version: %x }",
+	return fmt.Sprintf("{ Header: %s, clientID: %s, authenticatorClient: %x, logoinMode: %x, timestamp: %010d, version: %#x }",
 		lo.MessageHeader, lo.clientID, lo.authenticatorClient, lo.loginMode, lo.timestamp, lo.version)
 }
 
@@ -119,7 +120,7 @@ func (lo *Login) ToResponse(code uint32) interface{} {
 
 func reqAuthMd5(connect *Login) [16]byte {
 	authDt := make([]byte, 0, 64)
-	authDt = append(authDt, Conf.clientId...)
+	authDt = append(authDt, Conf.ClientId...)
 	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0)
 	authDt = append(authDt, Conf.SharedSecret...)
 	authDt = append(authDt, fmt.Sprintf("%010d", connect.timestamp)...)
@@ -144,7 +145,7 @@ func (resp *LoginResp) Encode() []byte {
 
 func (resp *LoginResp) Decode(header *MessageHeader, frame []byte) error {
 	// check
-	if header == nil || header.RequestId != CmdLogin || len(frame) < (LoginRespLen-HeadLength) {
+	if header == nil || header.RequestId != CmdLoginResp || len(frame) < (LoginRespLen-HeadLength) {
 		return ErrorPacket
 	}
 	var index int
@@ -158,7 +159,7 @@ func (resp *LoginResp) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (resp *LoginResp) String() string {
-	return fmt.Sprintf("{ Header: %s, status: {%d: %s}, authenticatorISMG: %x, version: %x }",
+	return fmt.Sprintf("{ Header: %s, status: {%d: %s}, authenticatorISMG: %x, version: %#x }",
 		resp.MessageHeader, resp.status, ConnectStatusMap[resp.status], resp.authenticatorServer, resp.version)
 }
 

@@ -35,6 +35,7 @@ func NewSnowflake(d int64, w int64) *Snowflake {
 }
 func (s *Snowflake) NextVal() int64 {
 	s.Lock()
+	defer s.Unlock()
 	now := time.Now().UnixNano() / 1000000 // 转毫秒
 	if s.timestamp == now {
 		// 当同一时间戳（精度：毫秒）下多次生成id会增加序列号
@@ -53,12 +54,10 @@ func (s *Snowflake) NextVal() int64 {
 	}
 	t := now - epoch
 	if t > timestampMax {
-		s.Unlock()
 		log.Errorf("epoch must be between 0 and %d", timestampMax-1)
 		return 0
 	}
 	s.timestamp = now
 	r := (t << timestampShift) | (s.datacenterId << datacenterShift) | (s.workerId << workerShift) | (s.sequence)
-	s.Unlock()
 	return r
 }

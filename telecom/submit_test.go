@@ -1,11 +1,17 @@
 package telecom
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// func TestMain(m *testing.M) {
+// 	Sequence32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
+// 	MsgIdSeq = snowflake32.NewTelecomflake(strconv.Itoa(Conf.SmgwId))
+// }
 
 func TestNewSubmit(t *testing.T) {
 	subs := NewSubmit([]string{"17600001111", "17700001111"}, Poem, MtOptions{atTime: time.Now().Add(time.Minute)})
@@ -24,24 +30,88 @@ func TestNewSubmit(t *testing.T) {
 	}
 }
 
-func TestSubmit_Decode(t *testing.T) {
-
+func TestSubmit_Encode(t *testing.T) {
+	encode(t, []string{"17600001111", "17600002222"}, Poem, 4)
+	encode(t, []string{"17600001111"}, "hello world 世界，你好！", 1)
 }
 
-func TestSubmit_Encode(t *testing.T) {
-	subs := NewSubmit([]string{"17600001111", "17700001111"}, Poem, MtOptions{atTime: time.Now().Add(time.Minute)})
-	assert.True(t, len(subs) == 4)
+func encode(t *testing.T, phones []string, txt string, l int) {
+	subs := NewSubmit(phones, txt, MtOptions{atTime: time.Now().Add(time.Minute)})
+	assert.True(t, len(subs) == l)
 
 	for _, sub := range subs {
 		t.Logf("%+v", sub)
 		dt := sub.Encode()
 		assert.True(t, int(sub.PacketLength) == len(dt))
 		t.Logf("%v: %x", int(sub.PacketLength) == len(dt), dt)
+		resp := sub.ToResponse(0).(*SubmitResp)
+		t.Logf("%s", resp)
+		dt = resp.Encode()
+		t.Logf("%v: %x", int(resp.PacketLength) == len(dt), dt)
 	}
 }
 
-func TestSubmit_ToResponse(t *testing.T) {
+func TestSubmit_Decode(t *testing.T) {
+	decode(t, []string{"17600001111", "17600002222"}, Poem, 4)
+	decode(t, []string{"17600001111"}, "hello world 世界，你好！", 1)
+}
 
+func decode(t *testing.T, phones []string, txt string, l int) {
+	subs := NewSubmit(phones, txt, MtOptions{atTime: time.Now().Add(time.Minute)})
+	assert.True(t, len(subs) == l)
+
+	for _, sub := range subs {
+		dt := sub.Encode()
+		assert.True(t, int(sub.PacketLength) == len(dt))
+		t.Logf("%s", sub)
+		t.Logf("%v: %x", int(sub.PacketLength) == len(dt), dt)
+
+		head := MessageHeader{}
+		err := head.Decode(dt)
+		if err != nil {
+			t.Fail()
+			continue
+		}
+		subDec := &Submit{}
+		err = subDec.Decode(&head, dt[12:])
+		if err != nil {
+			t.Fail()
+			continue
+		}
+		dt2 := subDec.Encode()
+		t.Logf("%s", subDec)
+		t.Logf("%v: %x", int(subDec.PacketLength) == len(dt2), dt2)
+		assert.True(t, 0 == bytes.Compare(dt, dt2))
+
+		resp := subDec.ToResponse(0).(*SubmitResp)
+		t.Logf("%s", resp)
+		dt = resp.Encode()
+		assert.True(t, int(resp.PacketLength) == len(dt))
+		t.Logf("%v: %x", int(resp.PacketLength) == len(dt), dt)
+		head = MessageHeader{}
+		err = head.Decode(dt)
+		if err != nil {
+			t.Fail()
+			continue
+		}
+		respDec := &SubmitResp{}
+		err = respDec.Decode(&head, dt[12:])
+		if err != nil {
+			t.Fail()
+			continue
+		}
+		t.Logf("%s", respDec)
+		assert.True(t, int(respDec.PacketLength) == len(dt))
+		t.Logf("%v: %x", int(respDec.PacketLength) == len(dt), dt)
+		assert.True(t, 0 == bytes.Compare(respDec.msgId, resp.msgId))
+	}
+}
+
+var sub = NewSubmit([]string{"17600001111"}, "hello world 世界，你好！", MtOptions{atTime: time.Now().Add(time.Minute)})
+
+func BenchmarkSubmit_ToResponse(b *testing.B) {
+	resp := sub[0].ToResponse(0).(*SubmitResp)
+	b.Logf("%s", resp)
 }
 
 const Poem = "将进酒\n" +

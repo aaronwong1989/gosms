@@ -2,21 +2,19 @@ package snowflake32
 
 import (
 	"testing"
-	"time"
 )
 
-func TestTimeStamp(t *testing.T) {
-	snow := &Snowflake{datacenter: 1, worker: 1}
-	time.Sleep(time.Second)
-	for i := 0; i < 520; i++ {
-		t.Logf("curVal: %#b", snow.NextVal())
-		t.Logf("curVal: %s", snow)
-	}
-	seq := uint32(snow.NextVal())
-	t.Logf("uint32 seq: %d", seq)
-	t.Logf("uint32 seq: %d", snow.NextVal())
+func Test_bcdToString(t *testing.T) {
+	bcd := []byte{0x01, 0x23, 0x45, 0x67, 0x8a}
+	str := BcdToString(bcd)
+
+	t.Logf("bcd: %x, len: %d", bcd, len(bcd))
+	t.Logf("str: %s", str)
 }
 
-func Benchmark_passedSeconds(t *testing.B) {
-	passedSeconds()
+func Test_stoBcd(t *testing.T) {
+	str := "012345678a"
+	bcd := StoBcd(str)
+	t.Logf("str: %s", str)
+	t.Logf("bcd: %x, len: %d", bcd, len(bcd))
 }
