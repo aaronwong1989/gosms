@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"strings"
 )
 
 // TLV represents a Type-Length-Value object.
@@ -34,6 +35,10 @@ func (o *object) Length() uint16 {
 // Value returns the object's value
 func (o *object) Value() []byte {
 	return o.val
+}
+
+func (o *object) String() string {
+	return fmt.Sprintf("{tag: %x, len: %d, val: %#x}", o.typ, o.len, o.val)
 }
 
 // Equal returns true if a pair of TLV objects are the same.
@@ -244,6 +249,19 @@ func (tl *TlvList) Write(w io.Writer) error {
 		}
 	}
 	return nil
+}
+
+func (tl *TlvList) String() string {
+	var sb strings.Builder
+	sb.Grow(int(8 * tl.Length()))
+	sb.WriteString("[")
+	for e := tl.objects.Front(); e != nil; e = e.Next() {
+		o := e.Value.(*object)
+		sb.WriteString(o.String())
+		sb.WriteString(",")
+	}
+	sb.WriteString("]")
+	return sb.String()
 }
 
 // Read takes an io.Reader and builds a TLVList from that.

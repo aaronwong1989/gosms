@@ -2,6 +2,7 @@ package telecom
 
 import (
 	"bytes"
+	"fmt"
 
 	"sms-vgateway/tool"
 )
@@ -132,6 +133,17 @@ func (s *Submit) Decode(header *MessageHeader, frame []byte) error {
 func (s *Submit) ToResponse(code uint32) interface{} {
 	// TODO implement me
 	panic("implement me")
+}
+
+func (s *Submit) String() string {
+	return fmt.Sprintf("{ header: %v, msgType: %v, needReport: %v, priority: %v, serviceID: %v, "+
+		"feeType: %v, feeCode: %v, fixedFee: %v, msgFormat: %v, atTime: %v, validTime: %v, srcTermID: %v, "+
+		"chargeTermID: %v, destTermIDCount: %v, destTermID: %v, msgLength: %v, msgContent: %#x..., "+
+		"reserve: %v, tlvList: %s }",
+		s.MessageHeader, s.msgType, s.needReport, s.priority, s.serviceID,
+		s.feeType, s.feeCode, s.fixedFee, s.msgFormat, s.atTime, s.validTime, s.srcTermID,
+		s.chargeTermID, s.destTermIDCount, s.destTermID, s.msgLength, s.msgBytes[:6],
+		s.reserve, s.tlvList)
 }
 
 const (
