@@ -11,9 +11,9 @@ max-cons: 10
 # 心跳报文发送间隔
 active-test-duration: 60s
 # 多节点部署时使用，datacenter-id 取值 [0,3]
-datacenter-id: 0
+datacenter-id: 1
 # 多节点部署时使用，worker-id 取值 [0,8]
-worker-id: 0
+worker-id: 1
 # 接收窗口大小
 receive-window-size: 512
 # 处理消息的任务线程池大小

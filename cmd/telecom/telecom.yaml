@@ -1,6 +1,6 @@
 ### 网关参数 ###
 # 目前仅支持模拟单一值
-client-id: "123456"
+client-id: "12345678"
 shared-secret: "shared secret"
 # 是否校验登录，如果登录如法验证通过，设置未false
 auth-check: false
@@ -11,9 +11,11 @@ max-cons: 10
 # 心跳报文发送间隔
 active-test-duration: 60s
 # 多节点部署时使用，datacenter-id 取值 [0,3]
-datacenter-id: 0
+datacenter-id: 1
 # 多节点部署时使用，worker-id 取值 [0,8]
-worker-id: 0
+worker-id: 1
+# SMGW代码：3字节（BCD 码，取值 6位十进制数）
+smgw-id: 100001
 # 接收窗口大小
 receive-window-size: 512
 # 处理消息的任务线程池大小
