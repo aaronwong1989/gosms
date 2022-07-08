@@ -67,7 +67,7 @@ func (connect *Connect) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (connect *Connect) String() string {
-	return fmt.Sprintf("{ Header: %s, sourceAddr: %s, authenticatorSource: %x, version: %x, timestamp: %010d }",
+	return fmt.Sprintf("{ Header: %s, sourceAddr: %s, authenticatorSource: %x, version: %#x, timestamp: %010d }",
 		connect.MessageHeader, connect.sourceAddr, connect.authenticatorSource, connect.version, connect.timestamp)
 }
 
@@ -173,7 +173,7 @@ func (resp *ConnectResp) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (resp *ConnectResp) String() string {
-	return fmt.Sprintf("{ Header: %s, status: {%d: %s}, authenticatorISMG: %x, version: %x }",
+	return fmt.Sprintf("{ Header: %s, status: {%d: %s}, authenticatorISMG: %x, version: %#x }",
 		resp.MessageHeader, resp.status, ConnectStatusMap[resp.status], resp.authenticatorISMG, resp.version)
 }
 
