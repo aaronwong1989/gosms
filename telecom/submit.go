@@ -200,7 +200,7 @@ func (s *Submit) ToResponse(code uint32) interface{} {
 }
 
 func (s *Submit) String() string {
-	return fmt.Sprintf("{ header: %v, msgType: %v, needReport: %v, priority: %v, serviceID: %v, "+
+	return fmt.Sprintf("{ header: %v, msgType: %v, isReport: %v, priority: %v, serviceID: %v, "+
 		"feeType: %v, feeCode: %v, fixedFee: %v, msgFormat: %v, atTime: %v, validTime: %v, srcTermID: %v, "+
 		"chargeTermID: %v, destTermIDCount: %v, destTermID: %v, msgLength: %v, msgContent: %#x..., "+
 		"reserve: %v, tlvList: %s }",
@@ -238,24 +238,3 @@ func (r *SubmitResp) String() string {
 func (r *SubmitResp) MsgId() string {
 	return fmt.Sprintf("%x", r.msgId)
 }
-
-const (
-	TP_pid           = uint16(0x0001)
-	TP_udhi          = uint16(0x0002)
-	LinkID           = uint16(0x0003)
-	ChargeUserType   = uint16(0x0004)
-	ChargeTermType   = uint16(0x0005)
-	ChargeTermPseudo = uint16(0x0006)
-	DestTermType     = uint16(0x0007)
-	DestTermPseudo   = uint16(0x0008)
-	PkTotal          = uint16(0x0009)
-	PkNumber         = uint16(0x000A)
-	SubmitMsgType    = uint16(0x000B)
-	SPDealReslt      = uint16(0x000C)
-	SrcTermType      = uint16(0x000D)
-	SrcTermPseudo    = uint16(0x000E)
-	NodesCount       = uint16(0x000F)
-	MsgSrc           = uint16(0x0010)
-	SrcType          = uint16(0x0011)
-	MServiceID       = uint16(0x0012)
-)

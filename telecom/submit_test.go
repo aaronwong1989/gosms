@@ -114,6 +114,15 @@ func BenchmarkSubmit_ToResponse(b *testing.B) {
 	b.Logf("%s", resp)
 }
 
+func TestGbk(t *testing.T) {
+	gb, _ := GbEncoder.String(Poem)
+	gbDec, _ := GbDecoder.String(gb)
+	t.Logf("Origin: %s", Poem)
+	t.Logf("GbStr : %s", gbDec)
+	t.Logf("Origin Hex: %x", Poem)
+	t.Logf("GbStr  Hex: %x", gb)
+}
+
 const Poem = "将进酒\n" +
 	"君不见黄河之水天上来，奔流到海不复回。\n" +
 	"君不见高堂明镜悲白发，朝如青丝暮成雪。\n" +

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"time"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -20,7 +19,7 @@ var ErrorPacket = errors.New("error packet")
 var GbEncoder = simplifiedchinese.GB18030.NewEncoder()
 var GbDecoder = simplifiedchinese.GB18030.NewDecoder()
 var Sequence32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
-var MsgIdSeq = snowflake32.NewTelecomflake(strconv.Itoa(Conf.SmgwId))
+var MsgIdSeq = snowflake32.NewTelecomflake(Conf.SmgwId)
 
 type Config struct {
 	// 公共参数
@@ -32,7 +31,7 @@ type Config struct {
 	ActiveTestDuration time.Duration `yaml:"active-test-duration"`
 	DataCenterId       int32         `yaml:"datacenter-id"`
 	WorkerId           int32         `yaml:"worker-id"`
-	SmgwId             int           `yaml:"smgw-id"`
+	SmgwId             string        `yaml:"smgw-id"`
 	ReceiveWindowSize  int           `yaml:"receive-window-size"`
 	MaxPoolSize        int           `yaml:"max-pool-size"`
 
@@ -74,6 +73,27 @@ func init() {
 		return
 	}
 }
+
+const (
+	TP_pid           = uint16(0x0001)
+	TP_udhi          = uint16(0x0002)
+	LinkID           = uint16(0x0003)
+	ChargeUserType   = uint16(0x0004)
+	ChargeTermType   = uint16(0x0005)
+	ChargeTermPseudo = uint16(0x0006)
+	DestTermType     = uint16(0x0007)
+	DestTermPseudo   = uint16(0x0008)
+	PkTotal          = uint16(0x0009)
+	PkNumber         = uint16(0x000A)
+	SubmitMsgType    = uint16(0x000B)
+	SPDealReslt      = uint16(0x000C)
+	SrcTermType      = uint16(0x000D)
+	SrcTermPseudo    = uint16(0x000E)
+	NodesCount       = uint16(0x000F)
+	MsgSrc           = uint16(0x0010)
+	SrcType          = uint16(0x0011)
+	MServiceID       = uint16(0x0012)
+)
 
 var StatMap = map[uint32]string{
 	0:  "成功",
