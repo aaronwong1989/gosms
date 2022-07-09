@@ -9,7 +9,7 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 
-	"sms-vgateway/tool"
+	"sms-vgateway/comm"
 )
 
 // Submit
@@ -345,11 +345,11 @@ func MsgSlices(fmt uint8, content string) (slices [][]byte) {
 	// 含中文
 	if fmt == 8 {
 		msgBytes = ucs2Encode(content)
-		slices = tool.ToTPUDHISlices(msgBytes, 140)
+		slices = comm.ToTPUDHISlices(msgBytes, 140)
 	} else {
 		// 纯英文
 		msgBytes = []byte(content)
-		slices = tool.ToTPUDHISlices(msgBytes, 160)
+		slices = comm.ToTPUDHISlices(msgBytes, 160)
 	}
 	return
 }

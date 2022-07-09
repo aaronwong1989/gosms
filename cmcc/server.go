@@ -1,13 +1,11 @@
 package cmcc
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -16,6 +14,7 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 
+	"sms-vgateway/comm"
 	"sms-vgateway/logging"
 )
 
@@ -35,12 +34,11 @@ type Server struct {
 func StartServer() {
 	var port int
 	var multicore bool
-	// Example command: go run server.go --port 9000 --multicore=true
 	flag.IntVar(&port, "port", 9000, "--port 9000")
 	flag.BoolVar(&multicore, "multicore", true, "--multicore=true")
 	flag.Parse()
 
-	log.Infof("current pid is %s.", SavePid("cmcc.pid"))
+	log.Infof("current pid is %s.", comm.SavePid("cmcc.pid"))
 	// 定义异步工作Go程池
 	options := ants.Options{
 		ExpiryDuration:   time.Minute,      // 1 分钟内不被使用的worker会被清除
@@ -183,9 +181,13 @@ func (s *Server) countConn() int {
 	return counter
 }
 
+func (s *Server) activeCons() int {
+	return s.engine.CountConnections()
+}
+
 func handleConnect(s *Server, c gnet.Conn, header *MessageHeader) gnet.Action {
-	frame := take(c, 39-HEAD_LENGTH)
-	logHex(logging.DebugLevel, "Connect", frame)
+	frame := comm.TakeBytes(c, 39-HEAD_LENGTH)
+	comm.LogHex(logging.DebugLevel, "Connect", frame)
 
 	connect := &Connect{}
 	err := connect.Decode(header, frame)
@@ -255,8 +257,8 @@ func handleDelivery(s *Server, c gnet.Conn, header *MessageHeader) gnet.Action {
 		return gnet.Close
 	}
 
-	frame := take(c, int(header.TotalLength-HEAD_LENGTH))
-	logHex(logging.DebugLevel, "Delivery", frame)
+	frame := comm.TakeBytes(c, int(header.TotalLength-HEAD_LENGTH))
+	comm.LogHex(logging.DebugLevel, "Delivery", frame)
 	dly := &Delivery{}
 	err := dly.Decode(header, frame)
 	if err != nil {
@@ -267,11 +269,11 @@ func handleDelivery(s *Server, c gnet.Conn, header *MessageHeader) gnet.Action {
 	// handle message async
 	_ = s.pool.Submit(func() {
 		// 模拟消息处理耗时
-		processTime := time.Duration(randNum(Conf.MinSubmitRespMs, Conf.MaxSubmitRespMs))
+		processTime := time.Duration(comm.RandNum(Conf.MinSubmitRespMs, Conf.MaxSubmitRespMs))
 		time.Sleep(processTime * time.Millisecond)
 
 		rtCode := uint32(0)
-		if diceCheck(Conf.SuccessRate) {
+		if comm.DiceCheck(Conf.SuccessRate) {
 			// 失败消息的返回码
 			rtCode = 9
 		}
@@ -296,8 +298,8 @@ func handleSubmit(s *Server, c gnet.Conn, header *MessageHeader) gnet.Action {
 		return gnet.Close
 	}
 
-	frame := take(c, int(header.TotalLength-HEAD_LENGTH))
-	logHex(logging.DebugLevel, "Submit", frame)
+	frame := comm.TakeBytes(c, int(header.TotalLength-HEAD_LENGTH))
+	comm.LogHex(logging.DebugLevel, "Submit", frame)
 	sub := &Submit{}
 	err := sub.Decode(header, frame)
 	if err != nil {
@@ -322,12 +324,12 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *Submit) func() {
 		// 模拟消息处理耗时，可配置
 		processTime := time.Duration(0)
 		if Conf.MinSubmitRespMs > 0 && Conf.MaxSubmitRespMs > Conf.MinSubmitRespMs {
-			processTime = time.Duration(randNum(Conf.MinSubmitRespMs, Conf.MaxSubmitRespMs))
+			processTime = time.Duration(comm.RandNum(Conf.MinSubmitRespMs, Conf.MaxSubmitRespMs))
 			time.Sleep(processTime * time.Millisecond)
 		}
 
 		rtCode := uint32(0)
-		if diceCheck(Conf.SuccessRate) {
+		if comm.DiceCheck(Conf.SuccessRate) {
 			// 失败消息的返回码
 			rtCode = 13
 		}
@@ -350,7 +352,7 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *Submit) func() {
 
 func reportAsyncSender(c gnet.Conn, sub *Submit, msgId uint64, wait time.Duration) func() {
 	return func() {
-		if diceCheck(100) {
+		if comm.DiceCheck(100) {
 			return
 		}
 		dly := sub.ToDeliveryReport(msgId)
@@ -395,11 +397,11 @@ func handActiveResp(c gnet.Conn, header *MessageHeader) (action gnet.Action) {
 }
 
 func getHeader(c gnet.Conn) *MessageHeader {
-	frame := take(c, HEAD_LENGTH)
+	frame := comm.TakeBytes(c, HEAD_LENGTH)
 	if frame == nil {
 		return nil
 	}
-	logHex(logging.DebugLevel, "Header", frame)
+	comm.LogHex(logging.DebugLevel, "Header", frame)
 
 	header := MessageHeader{}
 	err := header.Decode(frame)
@@ -433,66 +435,4 @@ func checkReceiveWindow(s *Server, c gnet.Conn, header *MessageHeader) gnet.Acti
 		header.CommandId = 0
 	}
 	return gnet.None
-}
-
-// 消费一定字节数的数据
-func take(c gnet.Conn, bytes int) []byte {
-	if c.InboundBuffered() < bytes {
-		return nil
-	}
-	frame, err := c.Peek(bytes)
-	if err != nil {
-		log.Errorf("[%-9s] decode error: %v", "OnTraffic", err)
-		return nil
-	}
-	_, err = c.Discard(bytes)
-	if err != nil {
-		log.Errorf("[%-9s] decode error: %v", "OnTraffic", err)
-		return nil
-	}
-	return frame
-}
-
-func logHex(level logging.Level, model string, bts []byte) {
-	msg := fmt.Sprintf("[OnTraffic] Hex %s: %x", model, bts)
-	if level == logging.DebugLevel {
-		log.Debugf(msg)
-	} else if level == logging.ErrorLevel {
-		log.Errorf(msg)
-	} else if level == logging.WarnLevel {
-		log.Warnf(msg)
-	} else {
-		log.Infof(msg)
-	}
-}
-
-func (s *Server) activeCons() int {
-	return s.engine.CountConnections()
-}
-
-func randNum(min, max int32) int {
-	return rand.Intn(int(max-min)) + int(min)
-}
-
-// 当前时间尾数与给定数相同时返回true
-func diceCheck(prob int32) bool {
-	return time.Now().Unix()%int64(prob) == 0
-}
-
-// SavePid 在程序执行的当前目录生成pid文件
-func SavePid(f string) string {
-	file, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		log.Errorf("%v", err)
-	}
-	pid := fmt.Sprintf("%d", os.Getpid())
-
-	writer := bufio.NewWriter(file)
-	_, _ = writer.WriteString(pid)
-	defer func(file *os.File, writer *bufio.Writer) {
-		_ = writer.Flush()
-		_ = file.Close()
-	}(file, writer)
-
-	return pid
 }
