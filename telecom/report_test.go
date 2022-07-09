@@ -10,7 +10,7 @@ func TestReport(t *testing.T) {
 	id := MsgIdSeq.NextSeq()
 	rpt := NewReport(id)
 	value := rpt.Encode()
-	t.Logf("value: %s", value)
+	t.Logf("len:%d, value: %s", len(value), value)
 	rpt2 := &Report{}
 	err := rpt2.Decode(value)
 	assert.True(t, err == nil)

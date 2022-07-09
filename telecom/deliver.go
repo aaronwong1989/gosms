@@ -3,6 +3,7 @@ package telecom
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
 	"time"
 
 	"sms-vgateway/tool"
@@ -34,11 +35,12 @@ func NewDeliver(srcNo string, destNo string, txt string) *Deliver {
 	baseLen := uint32(89)
 	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(Sequence32.NextVal())}
 	dlv := &Deliver{MessageHeader: head}
+	dlv.msgId = MsgIdSeq.NextSeq()
 	dlv.isReport = 0
 	dlv.msgFormat = 15
 	dlv.recvTime = time.Now().Format("20060102150405")
 	dlv.srcTermID = srcNo
-	dlv.destTermID = destNo
+	dlv.destTermID = Conf.DisplayNo + destNo
 	// 上行最长70字符
 	subTxt := txt
 	rs := []rune(txt)
@@ -50,29 +52,117 @@ func NewDeliver(srcNo string, destNo string, txt string) *Deliver {
 	msg := []byte(gbs)
 	dlv.msgBytes = msg
 	dlv.msgLength = byte(len(msg))
+	dlv.msgContent = subTxt
+	dlv.PacketLength = baseLen + uint32(dlv.msgLength)
 	return dlv
 }
 
-func (dlv *Deliver) Deliver() []byte {
-	return nil
+func NewDeliveryReport(mt *Submit, msgId []byte) *Deliver {
+	baseLen := uint32(89)
+	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(Sequence32.NextVal())}
+	dlv := &Deliver{MessageHeader: head}
+	rpt := NewReport(msgId)
+	dlv.msgId = MsgIdSeq.NextSeq()
+	dlv.report = rpt
+	dlv.msgLength = 115
+	dlv.isReport = 1
+	dlv.msgFormat = 0
+	dlv.recvTime = time.Now().Format("20060102150405")
+	dlv.srcTermID = mt.destTermID[0]
+	dlv.destTermID = mt.srcTermID
+	dlv.PacketLength = baseLen + 115
+	return dlv
+}
+
+func (dlv *Deliver) Encode() []byte {
+	frame := dlv.MessageHeader.Encode()
+	index := 12
+	copy(frame[index:index+10], dlv.msgId)
+	index += 10
+	index = tool.CopyByte(frame, dlv.isReport, index)
+	index = tool.CopyByte(frame, dlv.msgFormat, index)
+	index = tool.CopyStr(frame, dlv.recvTime, index, 14)
+	index = tool.CopyStr(frame, dlv.srcTermID, index, 21)
+	index = tool.CopyStr(frame, dlv.destTermID, index, 21)
+	index = tool.CopyByte(frame, dlv.msgLength, index)
+	if dlv.IsReport() && dlv.report != nil {
+		rts := dlv.report.Encode()
+		index = tool.CopyStr(frame, rts, index, int(dlv.msgLength))
+	} else {
+		copy(frame[index:index+int(dlv.msgLength)], dlv.msgBytes)
+		index += int(dlv.msgLength)
+	}
+	index = tool.CopyStr(frame, dlv.reserve, index, 8)
+	return frame
 }
 
 func (dlv *Deliver) Decode(header *MessageHeader, frame []byte) error {
+	// check
+	if header == nil || header.RequestId != CmdDeliver || uint32(len(frame)) < (header.PacketLength-HeadLength) {
+		return ErrorPacket
+	}
+	dlv.MessageHeader = header
+	var index int
+	dlv.msgId = frame[index : index+10]
+	index += 10
+	dlv.isReport = frame[index]
+	index += 1
+	dlv.msgFormat = frame[index]
+	index += 1
+	dlv.recvTime = tool.TrimStr(frame[index : index+14])
+	index += 14
+	dlv.srcTermID = tool.TrimStr(frame[index : index+21])
+	index += 21
+	dlv.destTermID = tool.TrimStr(frame[index : index+21])
+	index += 21
+	dlv.msgLength = frame[index]
+	index += 1
+	if dlv.IsReport() {
+		txt := string(frame[index : index+int(dlv.msgLength)])
+		dlv.report = &Report{}
+		err := dlv.report.Decode(txt)
+		if err != nil {
+			return err
+		}
+	} else {
+		bytes, err := GbDecoder.Bytes(frame[index : index+int(dlv.msgLength)])
+		if err != nil {
+			return err
+		}
+		dlv.msgContent = string(bytes)
+	}
+	// 后续字节不解析了
 	return nil
 }
 
 func (dlv *Deliver) ToResponse(code uint32) interface{} {
 	header := *dlv.MessageHeader
-	header.RequestId = CmdSubmitResp
+	header.RequestId = CmdDeliverResp
 	header.PacketLength = 26
-	resp := &SubmitResp{MessageHeader: &header}
+	resp := &DeliverResp{MessageHeader: &header}
 	resp.status = code
 	resp.msgId = MsgIdSeq.NextSeq()
 	return resp
 }
 
 func (dlv *Deliver) String() string {
-	return ""
+	content := ""
+	if dlv.IsReport() {
+		content = dlv.report.Encode()
+	} else {
+		content = strings.ReplaceAll(dlv.msgContent, "\n", " ")
+	}
+	return fmt.Sprintf("{ header: %v, msgId: %x, isReport: %v, msgFormat: %v, recvTime: %v,"+
+		" srcTermID: %v, destTermID: %v, msgLength: %v, "+
+		"msgContent: \"%s\", reserve: %v, tlv: %v }",
+		dlv.MessageHeader, dlv.msgId, dlv.isReport, dlv.msgFormat, dlv.recvTime,
+		dlv.srcTermID, dlv.destTermID, dlv.msgLength,
+		content, dlv.reserve, dlv.tlvList,
+	)
+}
+
+func (dlv *Deliver) IsReport() bool {
+	return dlv.isReport == 1
 }
 
 func (r *DeliverResp) Encode() []byte {
@@ -86,7 +176,7 @@ func (r *DeliverResp) Encode() []byte {
 
 func (r *DeliverResp) Decode(header *MessageHeader, frame []byte) error {
 	// check
-	if header == nil || header.RequestId != CmdSubmitResp || uint32(len(frame)) < (header.PacketLength-HeadLength) {
+	if header == nil || header.RequestId != CmdDeliverResp || uint32(len(frame)) < (header.PacketLength-HeadLength) {
 		return ErrorPacket
 	}
 	r.MessageHeader = header

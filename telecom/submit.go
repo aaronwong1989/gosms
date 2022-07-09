@@ -184,8 +184,11 @@ func (s *Submit) Decode(header *MessageHeader, frame []byte) error {
 	s.msgContent = string(tmp)
 	s.reserve = tool.TrimStr(frame[index : index+8])
 	index += 8
-	buf := bytes.NewBuffer(frame[index:])
-	s.tlvList, _ = tool.Read(buf)
+	// 一个tlv至少5字节
+	if uint32(index+5) < s.PacketLength {
+		buf := bytes.NewBuffer(frame[index:])
+		s.tlvList, _ = tool.Read(buf)
+	}
 	return nil
 }
 
@@ -200,13 +203,17 @@ func (s *Submit) ToResponse(code uint32) interface{} {
 }
 
 func (s *Submit) String() string {
+	bts := s.msgBytes
+	if s.msgLength > 6 {
+		bts = s.msgBytes[:6]
+	}
 	return fmt.Sprintf("{ header: %v, msgType: %v, isReport: %v, priority: %v, serviceID: %v, "+
 		"feeType: %v, feeCode: %v, fixedFee: %v, msgFormat: %v, atTime: %v, validTime: %v, srcTermID: %v, "+
 		"chargeTermID: %v, destTermIDCount: %v, destTermID: %v, msgLength: %v, msgContent: %#x..., "+
 		"reserve: %v, tlvList: %s }",
 		s.MessageHeader, s.msgType, s.needReport, s.priority, s.serviceID,
 		s.feeType, s.feeCode, s.fixedFee, s.msgFormat, s.atTime, s.validTime, s.srcTermID,
-		s.chargeTermID, s.destTermIDCount, s.destTermID, s.msgLength, s.msgBytes[:6],
+		s.chargeTermID, s.destTermIDCount, s.destTermID, s.msgLength, bts,
 		s.reserve, s.tlvList)
 }
 
