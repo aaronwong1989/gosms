@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"sms-vgateway/tool"
+	"sms-vgateway/comm"
 )
 
 type Deliver struct {
@@ -22,7 +22,7 @@ type Deliver struct {
 	msgBytes   []byte        // 消息内容按照Msg_Fmt编码后的数据
 	report     *Report       // 状态报告
 	reserve    string        // 【8字节】保留
-	tlvList    *tool.TlvList // 【TLV】可选项参数
+	tlvList    *comm.TlvList // 【TLV】可选项参数
 }
 
 type DeliverResp struct {
@@ -57,7 +57,7 @@ func NewDeliver(srcNo string, destNo string, txt string) *Deliver {
 	return dlv
 }
 
-func NewDeliveryReport(mt *Submit, msgId []byte) *Deliver {
+func NewDeliveryReport(mt *Submit, msgId string) *Deliver {
 	baseLen := uint32(89)
 	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(Sequence32.NextVal())}
 	dlv := &Deliver{MessageHeader: head}
@@ -79,20 +79,20 @@ func (dlv *Deliver) Encode() []byte {
 	index := 12
 	copy(frame[index:index+10], dlv.msgId)
 	index += 10
-	index = tool.CopyByte(frame, dlv.isReport, index)
-	index = tool.CopyByte(frame, dlv.msgFormat, index)
-	index = tool.CopyStr(frame, dlv.recvTime, index, 14)
-	index = tool.CopyStr(frame, dlv.srcTermID, index, 21)
-	index = tool.CopyStr(frame, dlv.destTermID, index, 21)
-	index = tool.CopyByte(frame, dlv.msgLength, index)
+	index = comm.CopyByte(frame, dlv.isReport, index)
+	index = comm.CopyByte(frame, dlv.msgFormat, index)
+	index = comm.CopyStr(frame, dlv.recvTime, index, 14)
+	index = comm.CopyStr(frame, dlv.srcTermID, index, 21)
+	index = comm.CopyStr(frame, dlv.destTermID, index, 21)
+	index = comm.CopyByte(frame, dlv.msgLength, index)
 	if dlv.IsReport() && dlv.report != nil {
 		rts := dlv.report.Encode()
-		index = tool.CopyStr(frame, rts, index, int(dlv.msgLength))
+		index = comm.CopyStr(frame, rts, index, int(dlv.msgLength))
 	} else {
 		copy(frame[index:index+int(dlv.msgLength)], dlv.msgBytes)
 		index += int(dlv.msgLength)
 	}
-	index = tool.CopyStr(frame, dlv.reserve, index, 8)
+	index = comm.CopyStr(frame, dlv.reserve, index, 8)
 	return frame
 }
 
@@ -109,11 +109,11 @@ func (dlv *Deliver) Decode(header *MessageHeader, frame []byte) error {
 	index += 1
 	dlv.msgFormat = frame[index]
 	index += 1
-	dlv.recvTime = tool.TrimStr(frame[index : index+14])
+	dlv.recvTime = comm.TrimStr(frame[index : index+14])
 	index += 14
-	dlv.srcTermID = tool.TrimStr(frame[index : index+21])
+	dlv.srcTermID = comm.TrimStr(frame[index : index+21])
 	index += 21
-	dlv.destTermID = tool.TrimStr(frame[index : index+21])
+	dlv.destTermID = comm.TrimStr(frame[index : index+21])
 	index += 21
 	dlv.msgLength = frame[index]
 	index += 1

@@ -12,6 +12,11 @@ func NewActiveTest() *ActiveTest {
 	return at
 }
 
+func NewActiveTestResp(seq uint32) *ActiveTestResp {
+	at := &ActiveTestResp{PacketLength: HeadLength, RequestId: CmdActiveTest, SequenceId: seq}
+	return at
+}
+
 func (at *ActiveTest) Encode() []byte {
 	return (*MessageHeader)(at).Encode()
 }

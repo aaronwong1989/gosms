@@ -8,7 +8,7 @@
 # Test binary, built with `go test -c`
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Output of the go coverage comm, specifically when used with LiteIDE
 *.out
 
 # Dependency directories (remove the comment below to include it)
@@ -22,3 +22,8 @@ test.result.txt
 cmd/cmcc/cmcc
 cmd/cmcc/cmcc.tar
 cmd/cmcc/cmcc.tar.gz
+
+cmd/telecom/telecom
+cmd/telecom/telecom.tar
+cmd/telecom/telecom.tar.gz
+

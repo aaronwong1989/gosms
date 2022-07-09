@@ -1,6 +1,7 @@
 package telecom
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,7 +9,7 @@ import (
 
 func TestReport(t *testing.T) {
 	id := MsgIdSeq.NextSeq()
-	rpt := NewReport(id)
+	rpt := NewReport(fmt.Sprintf("%x", id))
 	value := rpt.Encode()
 	t.Logf("len:%d, value: %s", len(value), value)
 	rpt2 := &Report{}

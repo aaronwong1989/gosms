@@ -17,8 +17,8 @@ type Report struct {
 	txt        string // 【20字节】前3个字节，表示短消息长度（用ASCII码表示），后17个字节表示短消息的内容
 }
 
-func NewReport(id []byte) *Report {
-	report := &Report{id: fmt.Sprintf("%x", id)}
+func NewReport(id string) *Report {
+	report := &Report{id: id}
 	report.sub = "001"
 	report.dlvrd = "001"
 	report.submitDate = time.Now().Format("0601021504")

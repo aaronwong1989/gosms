@@ -12,6 +12,11 @@ func NewExit() *Exit {
 	return at
 }
 
+func NewExitResp(seq uint32) *ExitResp {
+	at := &ExitResp{PacketLength: HeadLength, RequestId: CmdExitResp, SequenceId: seq}
+	return at
+}
+
 func (at *Exit) Encode() []byte {
 	return (*MessageHeader)(at).Encode()
 }

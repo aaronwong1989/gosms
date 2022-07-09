@@ -3,7 +3,7 @@ package telecom
 import (
 	"time"
 
-	"sms-vgateway/tool"
+	"sms-vgateway/comm"
 )
 
 type MtOptions struct {
@@ -32,9 +32,9 @@ func (s *Submit) SetOptions(options MtOptions) {
 	}
 
 	if options.atTime.Year() != 1 {
-		s.atTime = tool.FormatTime(options.atTime)
+		s.atTime = comm.FormatTime(options.atTime)
 	} else {
-		s.atTime = tool.FormatTime(time.Now())
+		s.atTime = comm.FormatTime(time.Now())
 	}
 
 	vt := time.Now()
@@ -43,7 +43,7 @@ func (s *Submit) SetOptions(options MtOptions) {
 	} else {
 		vt.Add(Conf.ValidDuration)
 	}
-	s.validTime = tool.FormatTime(vt)
+	s.validTime = comm.FormatTime(vt)
 
 	s.srcTermID = Conf.DisplayNo
 	if options.srcTermID != "" {

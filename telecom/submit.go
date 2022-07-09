@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"sms-vgateway/tool"
+	"sms-vgateway/comm"
 )
 
 type Submit struct {
@@ -28,7 +28,7 @@ type Submit struct {
 	msgContent      string        // 【MsgLength字节】短消息内容
 	msgBytes        []byte        // 消息内容按照Msg_Fmt编码后的数据
 	reserve         string        // 【8字节】保留
-	tlvList         *tool.TlvList // 【TLV】可选项参数
+	tlvList         *comm.TlvList // 【TLV】可选项参数
 }
 
 type SubmitResp struct {
@@ -60,7 +60,7 @@ func NewSubmit(phones []string, content string, options MtOptions) (messages []*
 	if err != nil {
 		return nil
 	}
-	slices := tool.ToTPUDHISlices(data, 140)
+	slices := comm.ToTPUDHISlices(data, 140)
 	if len(slices) == 1 {
 		mt.msgBytes = slices[0]
 		mt.msgLength = byte(len(mt.msgBytes))
@@ -79,7 +79,7 @@ func NewSubmit(phones []string, content string, options MtOptions) (messages []*
 			sub.msgLength = byte(len(dt))
 			sub.msgBytes = dt
 			l := 0
-			sub.tlvList = tool.NewTlvList()
+			sub.tlvList = comm.NewTlvList()
 			sub.tlvList.Add(TP_pid, []byte{0x01})
 			l += 5
 			sub.tlvList.Add(TP_udhi, []byte{0x01})
@@ -101,27 +101,27 @@ func (s *Submit) Encode() []byte {
 	}
 	frame := s.MessageHeader.Encode()
 	index := 12
-	index = tool.CopyByte(frame, s.msgType, index)
-	index = tool.CopyByte(frame, s.needReport, index)
-	index = tool.CopyByte(frame, s.priority, index)
-	index = tool.CopyStr(frame, s.serviceID, index, 10)
-	index = tool.CopyStr(frame, s.feeType, index, 2)
-	index = tool.CopyStr(frame, s.feeCode, index, 6)
-	index = tool.CopyStr(frame, s.fixedFee, index, 6)
-	index = tool.CopyByte(frame, s.msgFormat, index)
-	index = tool.CopyStr(frame, s.atTime, index, 17)
-	index = tool.CopyStr(frame, s.validTime, index, 17)
-	index = tool.CopyStr(frame, s.srcTermID, index, 21)
-	index = tool.CopyStr(frame, s.chargeTermID, index, 21)
-	index = tool.CopyByte(frame, s.destTermIDCount, index)
+	index = comm.CopyByte(frame, s.msgType, index)
+	index = comm.CopyByte(frame, s.needReport, index)
+	index = comm.CopyByte(frame, s.priority, index)
+	index = comm.CopyStr(frame, s.serviceID, index, 10)
+	index = comm.CopyStr(frame, s.feeType, index, 2)
+	index = comm.CopyStr(frame, s.feeCode, index, 6)
+	index = comm.CopyStr(frame, s.fixedFee, index, 6)
+	index = comm.CopyByte(frame, s.msgFormat, index)
+	index = comm.CopyStr(frame, s.atTime, index, 17)
+	index = comm.CopyStr(frame, s.validTime, index, 17)
+	index = comm.CopyStr(frame, s.srcTermID, index, 21)
+	index = comm.CopyStr(frame, s.chargeTermID, index, 21)
+	index = comm.CopyByte(frame, s.destTermIDCount, index)
 	for _, tid := range s.destTermID {
-		index = tool.CopyStr(frame, tid, index, 21)
+		index = comm.CopyStr(frame, tid, index, 21)
 	}
 
-	index = tool.CopyByte(frame, s.msgLength, index)
+	index = comm.CopyByte(frame, s.msgLength, index)
 	copy(frame[index:index+int(s.msgLength)], s.msgBytes)
 	index += +int(s.msgLength)
-	index = tool.CopyStr(frame, s.reserve, index, 8)
+	index = comm.CopyStr(frame, s.reserve, index, 8)
 	if s.tlvList != nil {
 		buff := new(bytes.Buffer)
 		err := s.tlvList.Write(buff)
@@ -148,28 +148,28 @@ func (s *Submit) Decode(header *MessageHeader, frame []byte) error {
 	index++
 	s.priority = frame[index]
 	index++
-	s.serviceID = tool.TrimStr(frame[index : index+10])
+	s.serviceID = comm.TrimStr(frame[index : index+10])
 	index += 10
-	s.feeType = tool.TrimStr(frame[index : index+2])
+	s.feeType = comm.TrimStr(frame[index : index+2])
 	index += 2
-	s.feeCode = tool.TrimStr(frame[index : index+6])
+	s.feeCode = comm.TrimStr(frame[index : index+6])
 	index += 6
-	s.fixedFee = tool.TrimStr(frame[index : index+6])
+	s.fixedFee = comm.TrimStr(frame[index : index+6])
 	index += 6
 	s.msgFormat = frame[index]
 	index++
-	s.atTime = tool.TrimStr(frame[index : index+17])
+	s.atTime = comm.TrimStr(frame[index : index+17])
 	index += 17
-	s.validTime = tool.TrimStr(frame[index : index+17])
+	s.validTime = comm.TrimStr(frame[index : index+17])
 	index += 17
-	s.srcTermID = tool.TrimStr(frame[index : index+21])
+	s.srcTermID = comm.TrimStr(frame[index : index+21])
 	index += 21
-	s.chargeTermID = tool.TrimStr(frame[index : index+21])
+	s.chargeTermID = comm.TrimStr(frame[index : index+21])
 	index += 21
 	s.destTermIDCount = frame[index]
 	index++
 	for i := byte(0); i < s.destTermIDCount; i++ {
-		s.destTermID = append(s.destTermID, tool.TrimStr(frame[index:index+21]))
+		s.destTermID = append(s.destTermID, comm.TrimStr(frame[index:index+21]))
 		index += 21
 	}
 	s.msgLength = frame[index]
@@ -182,12 +182,12 @@ func (s *Submit) Decode(header *MessageHeader, frame []byte) error {
 	index += int(s.msgLength)
 	tmp, _ := GbDecoder.Bytes(content)
 	s.msgContent = string(tmp)
-	s.reserve = tool.TrimStr(frame[index : index+8])
+	s.reserve = comm.TrimStr(frame[index : index+8])
 	index += 8
 	// 一个tlv至少5字节
 	if uint32(index+5) < s.PacketLength {
 		buf := bytes.NewBuffer(frame[index:])
-		s.tlvList, _ = tool.Read(buf)
+		s.tlvList, _ = comm.Read(buf)
 	}
 	return nil
 }
@@ -244,4 +244,8 @@ func (r *SubmitResp) String() string {
 
 func (r *SubmitResp) MsgId() string {
 	return fmt.Sprintf("%x", r.msgId)
+}
+
+func (r *SubmitResp) Status() uint32 {
+	return r.status
 }
