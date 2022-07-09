@@ -5,7 +5,7 @@ pkill cmcc
 
 # -1=debug, 0=info, 1=warn..., default to info
 export GNET_LOGGING_LEVEL=0
-export GNET_LOGGING_FILE="/Users/huangzhonghui/logs/sms.log"
+export GNET_LOGGING_FILE="/Users/huangzhonghui/logs/cmcc.log"
 export CMCC_CONF_PATH="/Users/huangzhonghui/.cmcc.yaml"
 
 mkdir -p /Users/huangzhonghui/logs
@@ -15,6 +15,6 @@ mkdir -p /Users/huangzhonghui/logs
 nohup ./cmcc --port 9000 --multicore=true >panic.log 2>&1 &
 
 sleep 3
-tail -10 /Users/huangzhonghui/logs/sms.log
+tail -10 /Users/huangzhonghui/logs/cmcc.log
 sleep 7
 top -pid "$(cat cmcc.pid)"
