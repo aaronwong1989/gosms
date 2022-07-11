@@ -16,7 +16,3 @@ cp -f cmcc.yaml     ~/.cmcc.yaml
 cp -rf ~/GolandProjects/sms-vgateway/cmcc         ~/cmcc/sms-vgateway/
 cp -rf ~/GolandProjects/sms-vgateway/telecom      ~/cmcc/sms-vgateway/
 cp -rf ~/GolandProjects/sms-vgateway/comm         ~/cmcc/sms-vgateway/
-cp -rf ~/GolandProjects/sms-vgateway/logging      ~/cmcc/sms-vgateway/
-cp -rf ~/GolandProjects/sms-vgateway/snowflake    ~/cmcc/sms-vgateway/
-cp -rf ~/GolandProjects/sms-vgateway/snowflake32  ~/cmcc/sms-vgateway/
-

@@ -16,7 +16,5 @@ cp -f telecom.yaml     ~/.telecom.yaml
 cp -rf ~/GolandProjects/sms-vgateway/cmcc         ~/telecom/sms-vgateway/
 cp -rf ~/GolandProjects/sms-vgateway/telecom      ~/telecom/sms-vgateway/
 cp -rf ~/GolandProjects/sms-vgateway/comm         ~/telecom/sms-vgateway/
-cp -rf ~/GolandProjects/sms-vgateway/logging      ~/telecom/sms-vgateway/
-cp -rf ~/GolandProjects/sms-vgateway/snowflake    ~/telecom/sms-vgateway/
-cp -rf ~/GolandProjects/sms-vgateway/snowflake32  ~/telecom/sms-vgateway/
+
 
