@@ -57,7 +57,7 @@ func NewDeliver(srcNo string, destNo string, txt string) *Deliver {
 	return dlv
 }
 
-func NewDeliveryReport(mt *Submit, msgId string) *Deliver {
+func NewDeliveryReport(mt *Submit, msgId []byte) *Deliver {
 	baseLen := uint32(89)
 	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(RequestSeq.NextVal())}
 	dlv := &Deliver{MessageHeader: head}
@@ -70,7 +70,7 @@ func NewDeliveryReport(mt *Submit, msgId string) *Deliver {
 	dlv.recvTime = time.Now().Format("20060102150405")
 	dlv.srcTermID = mt.destTermID[0]
 	dlv.destTermID = mt.srcTermID
-	dlv.PacketLength = baseLen + 115
+	dlv.PacketLength = baseLen + uint32(RptLen)
 	return dlv
 }
 
@@ -87,7 +87,8 @@ func (dlv *Deliver) Encode() []byte {
 	index = comm.CopyByte(frame, dlv.msgLength, index)
 	if dlv.IsReport() && dlv.report != nil {
 		rts := dlv.report.Encode()
-		index = comm.CopyStr(frame, rts, index, int(dlv.msgLength))
+		copy(frame[index:index+RptLen], rts)
+		index += RptLen
 	} else {
 		copy(frame[index:index+int(dlv.msgLength)], dlv.msgBytes)
 		index += int(dlv.msgLength)
@@ -118,9 +119,8 @@ func (dlv *Deliver) Decode(header *MessageHeader, frame []byte) error {
 	dlv.msgLength = frame[index]
 	index += 1
 	if dlv.IsReport() {
-		txt := string(frame[index : index+int(dlv.msgLength)])
 		dlv.report = &Report{}
-		err := dlv.report.Decode(txt)
+		err := dlv.report.Decode(frame[index : index+RptLen])
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func (dlv *Deliver) ToResponse(code uint32) interface{} {
 func (dlv *Deliver) String() string {
 	content := ""
 	if dlv.IsReport() {
-		content = dlv.report.Encode()
+		content = dlv.report.String()
 	} else {
 		content = strings.ReplaceAll(dlv.msgContent, "\n", " ")
 	}

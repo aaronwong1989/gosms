@@ -327,12 +327,12 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *Submit) func() {
 
 		// 发送状态报告
 		if resp.Status() == 0 {
-			_ = s.pool.Submit(reportAsyncSender(c, sub, resp.MsgId(), processTime))
+			_ = s.pool.Submit(reportAsyncSender(c, sub, resp.msgId, processTime))
 		}
 	}
 }
 
-func reportAsyncSender(c gnet.Conn, sub *Submit, msgId string, wait time.Duration) func() {
+func reportAsyncSender(c gnet.Conn, sub *Submit, msgId []byte, wait time.Duration) func() {
 	return func() {
 		if comm.DiceCheck(100) {
 			return

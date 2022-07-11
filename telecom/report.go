@@ -2,12 +2,11 @@ package telecom
 
 import (
 	"fmt"
-	"strings"
 	"time"
 )
 
 type Report struct {
-	id         string // 【10字节】状态报告对应原短消息的MsgID
+	id         []byte // 【10字节】状态报告对应原短消息的MsgID
 	sub        string // 【3字节】取缺省值001
 	dlvrd      string // 【3字节】取缺省值001
 	submitDate string // 【10字节】短消息提交时间（格式：年年月月日日时时分分，例如010331200000）
@@ -17,13 +16,15 @@ type Report struct {
 	txt        string // 【20字节】前3个字节，表示短消息长度（用ASCII码表示），后17个字节表示短消息的内容
 }
 
-func NewReport(id string) *Report {
+const RptLen = 10 + 3 + 3 + 10 + 10 + 7 + 3 + 20 + len("id: sub: dlvrd: submit date: done date: stat: err: text:")
+
+func NewReport(id []byte) *Report {
 	report := &Report{id: id}
 	report.sub = "001"
 	report.dlvrd = "001"
 	report.submitDate = time.Now().Format("0601021504")
 	report.doneDate = time.Now().Add(time.Minute).Format("0601021504")
-	report.txt = "000"
+	report.txt = ""
 	// 判断序号的时间戳部分
 	switch time.Now().Unix() % 1000 {
 	case 1:
@@ -64,68 +65,54 @@ func NewReport(id string) *Report {
 }
 
 func (rt *Report) String() string {
-	return fmt.Sprintf("id:%s sub:%s dlvrd:%s Submit_date:%s done_date:%s stat:%s err:%s Text:%s",
+	return fmt.Sprintf("id:%x sub:%s dlvrd:%s submit date:%s done date:%s stat:%s err:%s text:%x",
 		rt.id, rt.sub, rt.dlvrd, rt.submitDate, rt.doneDate, rt.stat, rt.err, rt.txt)
 }
 
-func (rt *Report) Encode() string {
-	return rt.String()
+func (rt *Report) Encode() []byte {
+	data := make([]byte, RptLen)
+	index := 0
+	copy(data[index:index+3], "id:")
+	index += 3
+	copy(data[index:index+10], rt.id)
+	index += 10
+	str := rt.String() // 不含text的值
+	start := 3 + 20    // "id:%x"
+	copy(data[index:RptLen-20], str[start:])
+	return data
 }
 
-func (rt *Report) Decode(s string) error {
-	ss := strings.Split(s, " ")
-	if len(ss) < 8 {
+func (rt *Report) Decode(frame []byte) error {
+	// check
+	if len(frame) < RptLen {
 		return ErrorPacket
-	} else {
-		// id
-		sss := strings.Split(ss[0], ":")
-		if len(sss) != 2 {
-			return ErrorPacket
-		}
-		rt.id = sss[1]
-		// sub
-		sss = strings.Split(ss[1], ":")
-		if len(sss) != 2 {
-			return ErrorPacket
-		}
-		rt.sub = sss[1]
-		// dlvrd
-		sss = strings.Split(ss[2], ":")
-		if len(sss) != 2 {
-			return ErrorPacket
-		}
-		rt.dlvrd = sss[1]
-		// Submit_date
-		sss = strings.Split(ss[3], ":")
-		if len(sss) != 2 {
-			return ErrorPacket
-		}
-		rt.submitDate = sss[1]
-		// done_date
-		sss = strings.Split(ss[4], ":")
-		if len(sss) != 2 {
-			return ErrorPacket
-		}
-		rt.doneDate = sss[1]
-		// stat
-		sss = strings.Split(ss[5], ":")
-		if len(sss) != 2 {
-			return ErrorPacket
-		}
-		rt.stat = sss[1]
-		// err
-		sss = strings.Split(ss[6], ":")
-		if len(sss) != 2 {
-			return ErrorPacket
-		}
-		rt.err = sss[1]
-		// Text
-		sss = strings.Split(ss[7], ":")
-		if len(sss) != 2 {
-			return ErrorPacket
-		}
-		rt.txt = sss[1]
 	}
+	index := 3 // skip "id:"
+	rt.id = frame[index : index+10]
+	index += 10
+
+	index += 5 // skip " sub:"
+	rt.sub = string(frame[index : index+3])
+	index += 3
+
+	index += 7 // skip " dlvrd:"
+	rt.dlvrd = string(frame[index : index+3])
+	index += 3
+
+	index += 13 // skip " submit date:"
+	rt.submitDate = string(frame[index : index+10])
+	index += 10
+
+	index += 11 // skip " done date:"
+	rt.doneDate = string(frame[index : index+10])
+	index += 10
+
+	index += 6 // skip " stat:"
+	rt.stat = string(frame[index : index+7])
+	index += 7
+
+	index += 5 // skip " err:"
+	rt.err = string(frame[index : index+3])
 	return nil
 }
 
