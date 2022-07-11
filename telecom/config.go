@@ -9,8 +9,8 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"gopkg.in/yaml.v3"
 
+	"sms-vgateway/comm"
 	"sms-vgateway/logging"
-	"sms-vgateway/snowflake32"
 )
 
 var log = logging.GetDefaultLogger()
@@ -18,8 +18,8 @@ var Conf Config
 var ErrorPacket = errors.New("error packet")
 var GbEncoder = simplifiedchinese.GB18030.NewEncoder()
 var GbDecoder = simplifiedchinese.GB18030.NewDecoder()
-var Sequence32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
-var MsgIdSeq = snowflake32.NewTelecomflake(Conf.SmgwId)
+var RequestSeq = comm.NewCycleSequence(Conf.DataCenterId, Conf.WorkerId)
+var MsgIdSeq = comm.NewBcdSequence(Conf.SmgwId)
 
 type Config struct {
 	// 公共参数

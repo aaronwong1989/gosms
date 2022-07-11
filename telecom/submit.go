@@ -41,7 +41,7 @@ const MtBaseLen = 126
 
 func NewSubmit(phones []string, content string, options MtOptions) (messages []*Submit) {
 
-	head := &MessageHeader{PacketLength: MtBaseLen, RequestId: CmdSubmit, SequenceId: uint32(Sequence32.NextVal())}
+	head := &MessageHeader{PacketLength: MtBaseLen, RequestId: CmdSubmit, SequenceId: uint32(RequestSeq.NextVal())}
 	mt := &Submit{}
 	mt.MessageHeader = head
 	mt.SetOptions(options)
@@ -74,7 +74,7 @@ func NewSubmit(phones []string, content string, options MtOptions) (messages []*
 			sub := &tmp
 			sub.MessageHeader = &tmpHead
 			if i != 0 {
-				sub.SequenceId = uint32(Sequence32.NextVal())
+				sub.SequenceId = uint32(RequestSeq.NextVal())
 			}
 			sub.msgLength = byte(len(dt))
 			sub.msgBytes = dt

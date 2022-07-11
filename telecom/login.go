@@ -34,7 +34,7 @@ func NewLogin() *Login {
 	header := &MessageHeader{}
 	header.PacketLength = LoginLen
 	header.RequestId = CmdLogin
-	header.SequenceId = uint32(Sequence32.NextVal())
+	header.SequenceId = uint32(RequestSeq.NextVal())
 	lo.MessageHeader = header
 	lo.clientID = Conf.ClientId
 	lo.loginMode = 2

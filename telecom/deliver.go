@@ -33,7 +33,7 @@ type DeliverResp struct {
 
 func NewDeliver(srcNo string, destNo string, txt string) *Deliver {
 	baseLen := uint32(89)
-	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(Sequence32.NextVal())}
+	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(RequestSeq.NextVal())}
 	dlv := &Deliver{MessageHeader: head}
 	dlv.msgId = MsgIdSeq.NextSeq()
 	dlv.isReport = 0
@@ -59,7 +59,7 @@ func NewDeliver(srcNo string, destNo string, txt string) *Deliver {
 
 func NewDeliveryReport(mt *Submit, msgId string) *Deliver {
 	baseLen := uint32(89)
-	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(Sequence32.NextVal())}
+	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(RequestSeq.NextVal())}
 	dlv := &Deliver{MessageHeader: head}
 	rpt := NewReport(msgId)
 	dlv.msgId = MsgIdSeq.NextSeq()

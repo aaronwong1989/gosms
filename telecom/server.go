@@ -3,7 +3,6 @@ package telecom
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	_ "net/http/pprof"
 	"sync"
 	"time"
@@ -55,8 +54,6 @@ func StartServer() {
 		pool:      pool,
 		window:    make(chan struct{}, Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
-
-	rand.Seed(time.Now().Unix()) // 随机种子
 
 	comm.StartMonitor(port)
 

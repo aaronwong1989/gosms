@@ -8,7 +8,7 @@ type Exit MessageHeader
 type ExitResp MessageHeader
 
 func NewExit() *Exit {
-	at := &Exit{PacketLength: HeadLength, RequestId: CmdExit, SequenceId: uint32(Sequence32.NextVal())}
+	at := &Exit{PacketLength: HeadLength, RequestId: CmdExit, SequenceId: uint32(RequestSeq.NextVal())}
 	return at
 }
 

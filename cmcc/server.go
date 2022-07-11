@@ -3,7 +3,6 @@ package cmcc
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"strconv"
@@ -59,8 +58,6 @@ func StartServer() {
 		pool:      pool,
 		window:    make(chan struct{}, Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
 	}
-
-	rand.Seed(time.Now().Unix()) // 随机种子
 
 	startMonitor(port)
 

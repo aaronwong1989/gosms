@@ -8,7 +8,7 @@ type ActiveTest MessageHeader
 type ActiveTestResp MessageHeader
 
 func NewActiveTest() *ActiveTest {
-	at := &ActiveTest{PacketLength: HeadLength, RequestId: CmdActiveTest, SequenceId: uint32(Sequence32.NextVal())}
+	at := &ActiveTest{PacketLength: HeadLength, RequestId: CmdActiveTest, SequenceId: uint32(RequestSeq.NextVal())}
 	return at
 }
 

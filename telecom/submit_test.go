@@ -9,7 +9,7 @@ import (
 )
 
 // func TestMain(m *testing.M) {
-// 	Sequence32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
+// 	RequestSeq = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
 // 	MsgIdSeq = snowflake32.NewTelecomflake(strconv.Itoa(Conf.SmgwId))
 // }
 
