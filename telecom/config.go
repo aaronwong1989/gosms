@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"sms-vgateway/comm"
-	"sms-vgateway/logging"
+	"sms-vgateway/comm/logging"
 )
 
 var log = logging.GetDefaultLogger()

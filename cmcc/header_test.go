@@ -11,7 +11,7 @@ func TestMessageHeader_Encode(t *testing.T) {
 	header := MessageHeader{
 		TotalLength: 16,
 		CommandId:   CMPP_CONNECT,
-		SequenceId:  uint32(Sequence32.NextVal()),
+		SequenceId:  uint32(RequestSeq.NextVal()),
 	}
 	t.Logf("%s", header.String())
 	t.Logf("%d", header.Encode())

@@ -72,7 +72,7 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 	if V3() {
 		baseLen = 163
 	}
-	header := &MessageHeader{TotalLength: uint32(baseLen), CommandId: CMPP_SUBMIT, SequenceId: uint32(Sequence32.NextVal())}
+	header := &MessageHeader{TotalLength: uint32(baseLen), CommandId: CMPP_SUBMIT, SequenceId: uint32(RequestSeq.NextVal())}
 	mt := &Submit{MessageHeader: header}
 
 	setOptions(mt, options)
@@ -113,7 +113,7 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 			sub := &tmp
 			sub.MessageHeader = &tmpHead
 			if i != 0 {
-				sub.SequenceId = uint32(Sequence32.NextVal())
+				sub.SequenceId = uint32(RequestSeq.NextVal())
 			}
 			sub.pkNumber = uint8(i + 1)
 			sub.msgLength = uint8(len(msgBytes))
@@ -274,7 +274,7 @@ func (sub *Submit) ToResponse(result uint32) interface{} {
 		resp.TotalLength = HEAD_LENGTH + 12
 	}
 	if result == 0 {
-		resp.msgId = uint64(Sequence64.NextVal())
+		resp.msgId = uint64(MsgIdSeq.NextVal())
 	}
 	resp.result = result
 	return resp
@@ -290,7 +290,7 @@ func (sub *Submit) ToDeliveryReport(msgId uint64) *Delivery {
 		d.TotalLength = 169
 	}
 	d.CommandId = CMPP_DELIVER
-	d.SequenceId = uint32(Sequence32.NextVal())
+	d.SequenceId = uint32(RequestSeq.NextVal())
 
 	d.registeredDelivery = 1
 	d.msgLength = 60

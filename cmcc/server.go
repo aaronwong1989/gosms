@@ -14,7 +14,7 @@ import (
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 
 	"sms-vgateway/comm"
-	"sms-vgateway/logging"
+	"sms-vgateway/comm/logging"
 )
 
 var log = logging.GetDefaultLogger()

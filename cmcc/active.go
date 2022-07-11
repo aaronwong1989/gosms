@@ -9,7 +9,7 @@ type ActiveTest struct {
 }
 
 func NewActiveTest() *ActiveTest {
-	header := &MessageHeader{TotalLength: HEAD_LENGTH, CommandId: CMPP_ACTIVE_TEST, SequenceId: uint32(Sequence32.NextVal())}
+	header := &MessageHeader{TotalLength: HEAD_LENGTH, CommandId: CMPP_ACTIVE_TEST, SequenceId: uint32(RequestSeq.NextVal())}
 	return &ActiveTest{header}
 }
 

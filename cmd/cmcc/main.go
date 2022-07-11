@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"sms-vgateway/cmcc"
-	"sms-vgateway/snowflake"
-	"sms-vgateway/snowflake32"
+	"sms-vgateway/comm"
+	"sms-vgateway/comm/snowflake"
 )
 
 func main() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	cmcc.Sequence32 = snowflake32.NewSnowflake(cmcc.Conf.DataCenterId, cmcc.Conf.WorkerId)
-	cmcc.Sequence64 = snowflake.NewSnowflake(int64(cmcc.Conf.DataCenterId), int64(cmcc.Conf.WorkerId))
+	cmcc.RequestSeq = comm.NewCycleSequence(cmcc.Conf.DataCenterId, cmcc.Conf.WorkerId)
+	cmcc.MsgIdSeq = snowflake.NewSnowflake(int64(cmcc.Conf.DataCenterId), int64(cmcc.Conf.WorkerId))
 	cmcc.StartServer()
 }

@@ -48,7 +48,7 @@ func NewDelivery(phone string, msg string, dest string, serviceId string) *Deliv
 	header := MessageHeader{
 		TotalLength: baseLen + uint32(dly.msgLength),
 		CommandId:   CMPP_DELIVER,
-		SequenceId:  uint32(Sequence32.NextVal())}
+		SequenceId:  uint32(RequestSeq.NextVal())}
 	dly.MessageHeader = &header
 	return dly
 }

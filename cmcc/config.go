@@ -8,15 +8,15 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"sms-vgateway/logging"
-	"sms-vgateway/snowflake"
-	"sms-vgateway/snowflake32"
+	"sms-vgateway/comm"
+	"sms-vgateway/comm/logging"
+	"sms-vgateway/comm/snowflake"
 )
 
 var Conf Config
 var ErrorPacket = errors.New("error packet")
-var Sequence32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
-var Sequence64 = snowflake.NewSnowflake(int64(Conf.DataCenterId), int64(Conf.WorkerId))
+var RequestSeq = comm.NewCycleSequence(Conf.DataCenterId, Conf.WorkerId)
+var MsgIdSeq = snowflake.NewSnowflake(int64(Conf.DataCenterId), int64(Conf.WorkerId))
 
 type Config struct {
 	// 公共参数

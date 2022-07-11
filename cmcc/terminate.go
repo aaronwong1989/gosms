@@ -3,7 +3,7 @@ package cmcc
 func NewTerminate() *MessageHeader {
 	t := MessageHeader{}
 	t.TotalLength = 12
-	t.SequenceId = uint32(Sequence32.NextVal())
+	t.SequenceId = uint32(RequestSeq.NextVal())
 	t.CommandId = CMPP_TERMINATE
 	return &t
 }

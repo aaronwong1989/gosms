@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"sms-vgateway/snowflake32"
+	"sms-vgateway/comm/snowflake32"
 )
 
 var sequence = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)

@@ -29,7 +29,7 @@ func NewConnect() *Connect {
 	header := &MessageHeader{}
 	header.TotalLength = 39
 	header.CommandId = CMPP_CONNECT
-	header.SequenceId = uint32(Sequence32.NextVal())
+	header.SequenceId = uint32(RequestSeq.NextVal())
 	con.MessageHeader = header
 	con.version = Conf.Version
 	con.sourceAddr = Conf.SourceAddr

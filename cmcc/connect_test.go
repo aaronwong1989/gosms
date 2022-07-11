@@ -14,7 +14,7 @@ func TestCmppConnect_Encode(t *testing.T) {
 	header := MessageHeader{
 		TotalLength: 39,
 		CommandId:   CMPP_CONNECT,
-		SequenceId:  uint32(Sequence32.NextVal()),
+		SequenceId:  uint32(RequestSeq.NextVal()),
 	}
 
 	connect := &Connect{MessageHeader: &header}
