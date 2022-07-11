@@ -6,7 +6,7 @@ pkill telecom
 # -1=debug, 0=info, 1=warn..., default to info
 export GNET_LOGGING_LEVEL=0
 export GNET_LOGGING_FILE="/Users/huangzhonghui/logs/telecom.log"
-export CMCC_CONF_PATH="/Users/huangzhonghui/.telecom.yaml"
+export TELECOM_CONF_PATH="/Users/huangzhonghui/.telecom.yaml"
 
 mkdir -p /Users/huangzhonghui/logs
 
