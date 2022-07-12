@@ -4,7 +4,7 @@ client-id: "12345678"
 shared-secret: "shared secret"
 # 是否校验登录，如果登录如法验证通过，设置未false
 auth-check: false
-# 见SMGP协议，48表示3.0 即 0x30 = 0011 0000
+# 见SMGP协议，48表示3.0 即 0x30 = 0011 0000；19表示1.3 即 0x13 = 0001 0011；32表示2.0 即 0x20 = 0010 0000
 version: 48
 # 最大连接数
 max-cons: 10
