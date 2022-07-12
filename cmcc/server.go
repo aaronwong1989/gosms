@@ -113,8 +113,8 @@ func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
 
 func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	header := getHeader(c)
-	if header == nil {
-		log.Warnf("[%-9s] [%v<->%v] decode error, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr())
+	if header == nil || header.TotalLength < 12 || header.TotalLength > 512 {
+		log.Warnf("[%-9s] [%v<->%v] decode error, header: %s, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr(), header)
 		return gnet.Close
 	}
 	action = checkReceiveWindow(s, c, header)
