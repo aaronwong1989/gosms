@@ -108,6 +108,8 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	}
 
 	switch header.RequestId {
+	case 0: // 触发限速
+		return gnet.None
 	case CmdLogin:
 		return handleLogin(s, c, header)
 	case CmdLoginResp:
@@ -128,9 +130,10 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 		return handleExit(s, c, header)
 	case CmdExitResp:
 		return handleExitResp(s, c, header)
+	default:
+		// 不合法包，关闭连接
+		return gnet.Close
 	}
-
-	return gnet.None
 }
 
 func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {

@@ -18,8 +18,8 @@ type Submit struct {
 	feeCode         string        // 【6字节】资费代码
 	fixedFee        string        // 【6字节】包月费/封顶费
 	msgFormat       byte          // 【1字节】短消息格式
-	atTime          string        // 【17字节】短消息定时发送时间
 	validTime       string        // 【17字节】短消息有效时间
+	atTime          string        // 【17字节】短消息定时发送时间
 	srcTermID       string        // 【21字节】短信息发送方号码
 	chargeTermID    string        // 【21字节】计费用户号码
 	destTermIDCount byte          // 【1字节】短消息接收号码总数
@@ -109,8 +109,8 @@ func (s *Submit) Encode() []byte {
 	index = comm.CopyStr(frame, s.feeCode, index, 6)
 	index = comm.CopyStr(frame, s.fixedFee, index, 6)
 	index = comm.CopyByte(frame, s.msgFormat, index)
-	index = comm.CopyStr(frame, s.atTime, index, 17)
 	index = comm.CopyStr(frame, s.validTime, index, 17)
+	index = comm.CopyStr(frame, s.atTime, index, 17)
 	index = comm.CopyStr(frame, s.srcTermID, index, 21)
 	index = comm.CopyStr(frame, s.chargeTermID, index, 21)
 	index = comm.CopyByte(frame, s.destTermIDCount, index)
@@ -158,9 +158,9 @@ func (s *Submit) Decode(header *MessageHeader, frame []byte) error {
 	index += 6
 	s.msgFormat = frame[index]
 	index++
-	s.atTime = comm.TrimStr(frame[index : index+17])
-	index += 17
 	s.validTime = comm.TrimStr(frame[index : index+17])
+	index += 17
+	s.atTime = comm.TrimStr(frame[index : index+17])
 	index += 17
 	s.srcTermID = comm.TrimStr(frame[index : index+21])
 	index += 21
@@ -208,11 +208,11 @@ func (s *Submit) String() string {
 		bts = s.msgBytes[:6]
 	}
 	return fmt.Sprintf("{ header: %v, msgType: %v, needReport: %v, priority: %v, serviceID: %v, "+
-		"feeType: %v, feeCode: %v, fixedFee: %v, msgFormat: %v, atTime: %v, validTime: %v, srcTermID: %v, "+
+		"feeType: %v, feeCode: %v, fixedFee: %v, msgFormat: %v, validTime: %v, atTime: %v, srcTermID: %v, "+
 		"chargeTermID: %v, destTermIDCount: %v, destTermID: %v, msgLength: %v, msgContent: %#x..., "+
 		"reserve: %v, tlvList: %s }",
 		s.MessageHeader, s.msgType, s.needReport, s.priority, s.serviceID,
-		s.feeType, s.feeCode, s.fixedFee, s.msgFormat, s.atTime, s.validTime, s.srcTermID,
+		s.feeType, s.feeCode, s.fixedFee, s.msgFormat, s.validTime, s.atTime, s.srcTermID,
 		s.chargeTermID, s.destTermIDCount, s.destTermID, s.msgLength, bts,
 		s.reserve, s.tlvList)
 }

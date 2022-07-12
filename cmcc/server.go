@@ -113,6 +113,7 @@ func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
 
 func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	header := getHeader(c)
+	// 防止粘包检测，不合法包，关闭连接
 	if header == nil || header.TotalLength < 12 || header.TotalLength > 512 {
 		log.Warnf("[%-9s] [%v<->%v] decode error, header: %s, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr(), header)
 		return gnet.Close
@@ -123,6 +124,8 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	}
 
 	switch header.CommandId {
+	case 0: // 触发限速
+		return gnet.None
 	case CMPP_CONNECT:
 		return handleConnect(s, c, header)
 	case CMPP_CONNECT_RESP:
@@ -143,9 +146,10 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 		return handleTerminate(s, c, header)
 	case CMPP_TERMINATE_RESP:
 		return handleTerminateResp(s, c, header)
+	default:
+		// 不合法包，关闭连接
+		return gnet.Close
 	}
-
-	return gnet.None
 }
 
 func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {

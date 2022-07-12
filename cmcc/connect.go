@@ -72,7 +72,7 @@ func (connect *Connect) String() string {
 }
 
 func (connect *Connect) Check() uint32 {
-	if connect.version > Conf.Version {
+	if connect.version&0xf0 != Conf.Version&0xf0 {
 		return 4
 	}
 

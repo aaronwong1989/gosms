@@ -80,7 +80,8 @@ func (lo *Login) String() string {
 }
 
 func (lo *Login) Check() uint32 {
-	if lo.version > Conf.Version {
+	// 大版本不匹配
+	if lo.version&0xf0 != Conf.Version&0xf0 {
 		return 22
 	}
 
