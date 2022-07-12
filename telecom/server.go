@@ -121,7 +121,7 @@ func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	case CmdDeliver:
 		return handleDelivery(s, c, header)
 	case CmdDeliverResp:
-		return gnet.None
+		return handleDeliveryResp(s, c, header)
 	case CmdActiveTest:
 		return handActive(s, c, header)
 	case CmdActiveTestResp:
@@ -272,6 +272,28 @@ func handleDelivery(s *Server, c gnet.Conn, header *MessageHeader) gnet.Action {
 			log.Errorf("[%-9s] DELIVERY_RESP ERROR: %v", "OnTraffic", err)
 		}
 	})
+	return gnet.None
+}
+
+// 处理上行消息Resp
+func handleDeliveryResp(s *Server, c gnet.Conn, header *MessageHeader) gnet.Action {
+	// check connect
+	_, ok := s.conMap.Load(c.RemoteAddr().String())
+	if !ok {
+		log.Warnf("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
+		return gnet.Close
+	}
+	frame := comm.TakeBytes(c, int(header.PacketLength-HeadLength))
+	comm.LogHex(logging.DebugLevel, "Deliver", frame)
+
+	resp := &DeliverResp{}
+	err := resp.Decode(header, frame)
+	if err != nil {
+		log.Errorf("[%-9s] DELIVER_RESP ERROR: %v", "OnTraffic", err)
+		return gnet.Close
+	}
+	log.Debugf("[%-9s] <<< %s", "OnTraffic", resp)
+
 	return gnet.None
 }
 
