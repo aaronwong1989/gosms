@@ -11,6 +11,8 @@ import (
 	"unsafe"
 
 	"github.com/panjf2000/gnet/v2"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 
 	"sms-vgateway/comm/logging"
 )
@@ -99,6 +101,26 @@ func TakeBytes(c gnet.Conn, bytes int) []byte {
 		return nil
 	}
 	return frame
+}
+
+// Ucs2Encode Encode to UCS2.
+func Ucs2Encode(s string) []byte {
+	e := unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM)
+	ucs, _, err := transform.Bytes(e.NewEncoder(), []byte(s))
+	if err != nil {
+		return nil
+	}
+	return ucs
+}
+
+// Ucs2Decode Decode from UCS2.
+func Ucs2Decode(ucs2 []byte) string {
+	e := unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM)
+	bts, _, err := transform.Bytes(e.NewDecoder(), ucs2)
+	if err != nil {
+		return ""
+	}
+	return TrimStr(bts)
 }
 
 func LogHex(level logging.Level, model string, bts []byte) {

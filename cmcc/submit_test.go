@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"sms-vgateway/comm"
 )
 
 func TestEncode(t *testing.T) {
@@ -34,8 +36,8 @@ func TestEncode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ucs2Encode(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ucs2Encode() = %v, want %v", got, tt.want)
+			if got := comm.Ucs2Encode(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Ucs2Encode() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -67,8 +69,8 @@ func TestDecode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ucs2Decode(tt.args.ucs2); got != tt.want {
-				t.Errorf("ucs2Decode() = %v, want %v", got, tt.want)
+			if got := comm.Ucs2Decode(tt.args.ucs2); got != tt.want {
+				t.Errorf("Ucs2Decode() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -132,7 +134,7 @@ func TestSubmit_Encode(t *testing.T) {
 		}
 
 		t.Logf("decMt.String()  : %s", decMt)
-		assert.Equal(t, mt.msgBytes[6:], ucs2Encode(decMt.msgContent))
+		assert.Equal(t, mt.msgBytes[6:], comm.Ucs2Encode(decMt.msgContent))
 	}
 }
 

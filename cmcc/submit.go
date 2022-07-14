@@ -6,9 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/text/encoding/unicode"
-	"golang.org/x/text/transform"
-
 	"sms-vgateway/comm"
 )
 
@@ -247,7 +244,7 @@ func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
 		content = content[6:]
 	}
 	if sub.msgFmt == 8 {
-		sub.msgContent = ucs2Decode(content)
+		sub.msgContent = comm.Ucs2Decode(content)
 	} else {
 		sub.msgContent = TrimStr(content)
 	}
@@ -344,7 +341,7 @@ func MsgSlices(fmt uint8, content string) (slices [][]byte) {
 	var msgBytes []byte
 	// 含中文
 	if fmt == 8 {
-		msgBytes = ucs2Encode(content)
+		msgBytes = comm.Ucs2Encode(content)
 		slices = comm.ToTPUDHISlices(msgBytes, 140)
 	} else {
 		// 纯英文
@@ -352,26 +349,6 @@ func MsgSlices(fmt uint8, content string) (slices [][]byte) {
 		slices = comm.ToTPUDHISlices(msgBytes, 160)
 	}
 	return
-}
-
-// Encode to UCS2.
-func ucs2Encode(s string) []byte {
-	e := unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM)
-	ucs, _, err := transform.Bytes(e.NewEncoder(), []byte(s))
-	if err != nil {
-		return nil
-	}
-	return ucs
-}
-
-// Decode from UCS2.
-func ucs2Decode(ucs2 []byte) string {
-	e := unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM)
-	bts, _, err := transform.Bytes(e.NewDecoder(), ucs2)
-	if err != nil {
-		return ""
-	}
-	return TrimStr(bts)
 }
 
 // MsgFmt 通过消息内容判断，设置编码格式。
