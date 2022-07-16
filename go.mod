@@ -1,4 +1,4 @@
-module sms-vgateway
+module gosms
 
 go 1.18
 

@@ -34,7 +34,7 @@ func NewBcdSequence(w string) *BcdSequence {
 	return ret
 }
 
-func (tf *BcdSequence) NextSeq() []byte {
+func (tf *BcdSequence) NextVal() []byte {
 	tf.Lock()
 	defer tf.Unlock()
 	mi := time.Now().Format("01021504")

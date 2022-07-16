@@ -14,7 +14,7 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 
-	"sms-vgateway/comm/logging"
+	"gosms/comm/logging"
 )
 
 var log = logging.GetDefaultLogger()
