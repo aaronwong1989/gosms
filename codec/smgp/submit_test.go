@@ -110,13 +110,6 @@ func decode(t *testing.T, phones []string, txt string, l int) {
 	}
 }
 
-var sub = NewSubmit([]string{"17600001111"}, "hello world 世界，你好！", MtOptions{atTime: time.Now().Add(time.Minute)})
-
-func BenchmarkSubmit_ToResponse(b *testing.B) {
-	resp := sub[0].ToResponse(0).(*SubmitResp)
-	b.Logf("%s", resp)
-}
-
 func TestGbk(t *testing.T) {
 	gb, _ := GbEncoder.String(Poem)
 	gbDec, _ := GbDecoder.String(gb)
