@@ -99,7 +99,7 @@ func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
 
 func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	header := getHeader(c)
-	if header == nil || header.PacketLength < 12 || header.PacketLength > 512 {
+	if header == nil || header.PacketLength < 12 || header.PacketLength > 10240 {
 		log.Warnf("[%-9s] [%v<->%v] decode error, header: %s, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr(), header)
 		return gnet.Close
 	}

@@ -113,7 +113,7 @@ func (s *Server) OnClose(c gnet.Conn, e error) (action gnet.Action) {
 func (s *Server) OnTraffic(c gnet.Conn) (action gnet.Action) {
 	header := getHeader(c)
 	// 防止粘包检测，不合法包，关闭连接
-	if header == nil || header.TotalLength < 12 || header.TotalLength > 512 {
+	if header == nil || header.TotalLength < 12 || header.TotalLength > 10240 {
 		log.Warnf("[%-9s] [%v<->%v] decode error, header: %s, close session...", "OnTraffic", c.RemoteAddr(), c.LocalAddr(), header)
 		return gnet.Close
 	}
