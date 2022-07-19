@@ -1,7 +1,7 @@
 #!/bin/sh
 
-pkill smgp
-pkill smgp
+pkill smgp.ismg
+pkill smgp.ismg
 
 # -1=debug, 0=info, 1=warn..., default to info
 export GNET_LOGGING_LEVEL=0

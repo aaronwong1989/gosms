@@ -1,4 +1,4 @@
-module gosms
+module github.com/aaronwong1989/gosms
 
 go 1.18
 

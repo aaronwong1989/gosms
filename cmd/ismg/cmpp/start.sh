@@ -1,7 +1,7 @@
 #!/bin/sh
 
-pkill cmpp
-pkill cmpp
+pkill cmpp.ismg
+pkill cmpp.ismg
 
 # -1=debug, 0=info, 1=warn..., default to info
 export GNET_LOGGING_LEVEL=0
