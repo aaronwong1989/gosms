@@ -6,14 +6,14 @@ type IHead interface {
 	String() string
 }
 
-type Codec interface {
+type Pdu interface {
 	Encode() []byte
 	Decode(header IHead, frame []byte) error
 	String() string
 }
 
 type RequestPdu interface {
-	Codec
+	Pdu
 	ToResponse(code uint32) interface{}
 }
 
