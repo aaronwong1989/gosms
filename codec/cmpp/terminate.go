@@ -1,6 +1,10 @@
 package cmpp
 
-func NewTerminate() *MessageHeader {
+import (
+	"github.com/aaronwong1989/gosms/codec"
+)
+
+func NewTerminate() codec.IHead {
 	t := MessageHeader{}
 	t.TotalLength = 12
 	t.SequenceId = uint32(Seq32.NextVal())
@@ -8,7 +12,7 @@ func NewTerminate() *MessageHeader {
 	return &t
 }
 
-func NewTerminateResp(seq uint32) *MessageHeader {
+func NewTerminateResp(seq uint32) codec.IHead {
 	t := MessageHeader{}
 	t.TotalLength = 12
 	t.SequenceId = seq

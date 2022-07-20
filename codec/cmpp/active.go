@@ -2,6 +2,8 @@ package cmpp
 
 import (
 	"fmt"
+
+	"github.com/aaronwong1989/gosms/codec"
 )
 
 type ActiveTest struct {
@@ -17,11 +19,12 @@ func (at *ActiveTest) Encode() []byte {
 	return at.MessageHeader.Encode()
 }
 
-func (at *ActiveTest) Decode(header *MessageHeader, frame []byte) error {
-	if header == nil || header.CommandId != CMPP_ACTIVE_TEST || frame != nil {
+func (at *ActiveTest) Decode(header codec.IHead, frame []byte) error {
+	h := header.(*MessageHeader)
+	if header == nil || h.CommandId != CMPP_ACTIVE_TEST || frame != nil {
 		return ErrorPacket
 	}
-	at.MessageHeader = header
+	at.MessageHeader = h
 	return nil
 }
 
@@ -44,11 +47,12 @@ func (at *ActiveTestResp) Encode() []byte {
 	return at.MessageHeader.Encode()
 }
 
-func (at *ActiveTestResp) Decode(header *MessageHeader, frame []byte) error {
-	if header == nil || header.CommandId != CMPP_ACTIVE_TEST_RESP || len(frame) < (13-HeadLength) {
+func (at *ActiveTestResp) Decode(header codec.IHead, frame []byte) error {
+	h := header.(*MessageHeader)
+	if header == nil || h.CommandId != CMPP_ACTIVE_TEST_RESP || len(frame) < (13-HeadLength) {
 		return ErrorPacket
 	}
-	at.MessageHeader = header
+	at.MessageHeader = h
 	at.reserved = frame[0]
 	return nil
 }

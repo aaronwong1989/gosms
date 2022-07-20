@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 
+	"github.com/aaronwong1989/gosms/codec"
 	"github.com/aaronwong1989/gosms/comm/logging"
 	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
@@ -14,8 +15,8 @@ var ErrorPacket = errors.New("error packet")
 var GbEncoder = simplifiedchinese.GB18030.NewEncoder()
 var GbDecoder = simplifiedchinese.GB18030.NewDecoder()
 var Conf yml_config.YmlConfig
-var Seq32 Sequence32
-var Seq80 Sequence80
+var Seq32 codec.Sequence32
+var Seq80 codec.SequenceBCD
 
 // type Config struct {
 // 	// 公共参数

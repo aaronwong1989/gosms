@@ -3,9 +3,11 @@ package cmpp
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/aaronwong1989/gosms/codec"
 )
 
-var ReportSeq Sequence32
+var ReportSeq codec.Sequence32
 
 type Report struct {
 	msgId          uint64 // 信息标识，SP提交短信(CMPP_SUBMIT)操作时，与SP相连的ISMG产生的 Msg_Id。【8字节】

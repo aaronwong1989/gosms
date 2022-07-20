@@ -13,6 +13,7 @@ func TestNewSubmit(t *testing.T) {
 	assert.True(t, len(subs) == 4)
 
 	for i, sub := range subs {
+		sub := sub.(*Submit)
 		t.Logf("%+v", sub)
 		if i < 3 {
 			assert.True(t, int(sub.PacketLength) == 328)
@@ -35,6 +36,7 @@ func encode(t *testing.T, phones []string, txt string, l int) {
 	assert.True(t, len(subs) == l)
 
 	for _, sub := range subs {
+		sub := sub.(*Submit)
 		t.Logf("%+v", sub)
 		dt := sub.Encode()
 		assert.True(t, int(sub.PacketLength) == len(dt))
@@ -56,6 +58,7 @@ func decode(t *testing.T, phones []string, txt string, l int) {
 	assert.True(t, len(subs) == l)
 
 	for _, sub := range subs {
+		sub := sub.(*Submit)
 		dt := sub.Encode()
 		assert.True(t, int(sub.PacketLength) == len(dt))
 		t.Logf("%s", sub)

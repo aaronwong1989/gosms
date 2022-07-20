@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
+
+	"github.com/aaronwong1989/gosms/codec"
 )
 
 // Delivery 上行短信或状态报告，不支持长短信
@@ -25,7 +27,7 @@ type Delivery struct {
 	linkID             string  // 点播业务使用的LinkID，非点播类业务的MT流程不使用该字段
 }
 
-func NewDelivery(phone string, msg string, dest string, serviceId string) *Delivery {
+func NewDelivery(phone string, msg string, dest string, serviceId string) codec.RequestPdu {
 	dly := &Delivery{}
 	dly.srcTerminalId = phone
 	dly.srcTerminalType = 0
@@ -94,11 +96,13 @@ func (d *Delivery) Encode() []byte {
 	return frame
 }
 
-func (d *Delivery) Decode(header *MessageHeader, frame []byte) error {
-	if header == nil || header.CommandId != CMPP_DELIVER || uint32(len(frame)) < (header.TotalLength-HeadLength) {
+func (d *Delivery) Decode(header codec.IHead, frame []byte) error {
+	// check
+	h := header.(*MessageHeader)
+	if header == nil || h.CommandId != CMPP_DELIVER || uint32(len(frame)) < (h.TotalLength-HeadLength) {
 		return ErrorPacket
 	}
-	d.MessageHeader = header
+	d.MessageHeader = h
 	d.msgId = binary.BigEndian.Uint64(frame[0:8])
 	d.destId = TrimStr(frame[8:29])
 	d.destId = TrimStr(frame[29:39])
@@ -213,8 +217,10 @@ func (r *DeliveryResp) Encode() []byte {
 	return frame
 }
 
-func (r *DeliveryResp) Decode(header *MessageHeader, frame []byte) error {
-	if header == nil || header.CommandId != CMPP_DELIVER_RESP || uint32(len(frame)) < (header.TotalLength-HeadLength) {
+func (r *DeliveryResp) Decode(header codec.IHead, frame []byte) error {
+	// check
+	h := header.(*MessageHeader)
+	if header == nil || h.CommandId != CMPP_DELIVER_RESP || uint32(len(frame)) < (h.TotalLength-HeadLength) {
 		return ErrorPacket
 	}
 	r.msgId = binary.BigEndian.Uint64(frame[0:8])

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aaronwong1989/gosms/codec"
 	"github.com/aaronwong1989/gosms/comm"
 )
 
@@ -43,7 +44,7 @@ type Submit struct {
 	linkID           string // 点播业务使用的LinkID，非点播类业务的MT流程不使用该字段 【20字节】
 }
 
-func NewSubmit(phones []string, content string, opts ...Option) (messages []*Submit) {
+func NewSubmit(phones []string, content string, opts ...Option) (messages []codec.RequestPdu) {
 	options := loadOptions(opts...)
 	baseLen := 138
 	if V3() {
@@ -78,7 +79,7 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 		mt.msgLength = uint8(len(slices[0]))
 		mt.msgBytes = slices[0]
 		mt.TotalLength = uint32(baseLen + len(termIds) + len(slices[0]))
-		return []*Submit{mt}
+		return []codec.RequestPdu{mt}
 	} else {
 		mt.tpUdhi = 1
 		mt.pkTotal = uint8(len(slices))
@@ -157,12 +158,13 @@ func (sub *Submit) Encode() []byte {
 	return frame
 }
 
-func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
+func (sub *Submit) Decode(header codec.IHead, frame []byte) error {
 	// check
-	if header == nil || header.CommandId != CMPP_SUBMIT || uint32(len(frame)) < (header.TotalLength-HeadLength) {
+	h := header.(*MessageHeader)
+	if header == nil || h.CommandId != CMPP_SUBMIT || uint32(len(frame)) < (h.TotalLength-HeadLength) {
 		return ErrorPacket
 	}
-	sub.MessageHeader = header
+	sub.MessageHeader = h
 	// msgId uint64
 	index := 8
 	sub.pkTotal = frame[index]
@@ -294,12 +296,13 @@ func (resp *SubmitResp) Encode() []byte {
 	}
 	return frame
 }
-func (resp *SubmitResp) Decode(header *MessageHeader, frame []byte) error {
+func (resp *SubmitResp) Decode(header codec.IHead, frame []byte) error {
 	// check
-	if header == nil || header.CommandId != CMPP_SUBMIT_RESP || uint32(len(frame)) < (header.TotalLength-HeadLength) {
+	h := header.(*MessageHeader)
+	if h == nil || h.CommandId != CMPP_SUBMIT_RESP || uint32(len(frame)) < (h.TotalLength-HeadLength) {
 		return ErrorPacket
 	}
-	resp.MessageHeader = header
+	resp.MessageHeader = h
 	resp.msgId = binary.BigEndian.Uint64(frame[0:8])
 	if V3() {
 		resp.result = binary.BigEndian.Uint32(frame[8:12])

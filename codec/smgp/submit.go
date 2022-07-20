@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/aaronwong1989/gosms/codec"
 	"github.com/aaronwong1989/gosms/comm"
 )
 
@@ -39,7 +40,7 @@ type SubmitResp struct {
 
 const MtBaseLen = 126
 
-func NewSubmit(phones []string, content string, options MtOptions) (messages []*Submit) {
+func NewSubmit(phones []string, content string, options MtOptions) (messages []codec.RequestPdu) {
 
 	head := &MessageHeader{PacketLength: MtBaseLen, RequestId: CmdSubmit, SequenceId: uint32(Seq32.NextVal())}
 	mt := &Submit{}
@@ -65,7 +66,7 @@ func NewSubmit(phones []string, content string, options MtOptions) (messages []*
 		mt.msgBytes = slices[0]
 		mt.msgLength = byte(len(mt.msgBytes))
 		mt.PacketLength = uint32(MtBaseLen + len(mt.destTermID)*21 + int(mt.msgLength))
-		return []*Submit{mt}
+		return []codec.RequestPdu{mt}
 	} else {
 		for i, dt := range slices {
 			// 拷贝 mt
@@ -134,12 +135,13 @@ func (s *Submit) Encode() []byte {
 	return frame
 }
 
-func (s *Submit) Decode(header *MessageHeader, frame []byte) error {
+func (s *Submit) Decode(header codec.IHead, frame []byte) error {
+	h := header.(*MessageHeader)
 	// check
-	if header == nil || header.RequestId != CmdSubmit || uint32(len(frame)) < (header.PacketLength-HeadLength) {
+	if header == nil || h.RequestId != CmdSubmit || uint32(len(frame)) < (h.PacketLength-HeadLength) {
 		return ErrorPacket
 	}
-	s.MessageHeader = header
+	s.MessageHeader = h
 
 	var index int
 	s.msgType = frame[index]
@@ -226,12 +228,13 @@ func (r *SubmitResp) Encode() []byte {
 	return frame
 }
 
-func (r *SubmitResp) Decode(header *MessageHeader, frame []byte) error {
+func (r *SubmitResp) Decode(header codec.IHead, frame []byte) error {
+	h := header.(*MessageHeader)
 	// check
-	if header == nil || header.RequestId != CmdSubmitResp || uint32(len(frame)) < (header.PacketLength-HeadLength) {
+	if header == nil || h.RequestId != CmdSubmitResp || uint32(len(frame)) < (h.PacketLength-HeadLength) {
 		return ErrorPacket
 	}
-	r.MessageHeader = header
+	r.MessageHeader = h
 	r.msgId = make([]byte, 10)
 	copy(r.msgId, frame[0:10])
 	r.status = binary.BigEndian.Uint32(frame[10:14])

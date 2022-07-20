@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aaronwong1989/gosms/codec"
 )
 
 func TestDeliver_Decode(t *testing.T) {
@@ -16,12 +18,14 @@ func TestDeliver_ReportDecode(t *testing.T) {
 	mts := NewSubmit([]string{"17011113333"}, "hello world，世界", MtOptions{})
 	mt := mts[0]
 	msp := mt.ToResponse(0).(*SubmitResp)
-	rpt := NewDeliveryReport(mt, msp.msgId)
+	tm := mt.(*Submit)
+	rpt := NewDeliveryReport(tm, msp.msgId)
 	t.Logf("dlv: %s", rpt)
 	testDeliver(t, rpt)
 }
 
-func testDeliver(t *testing.T, dlv *Deliver) {
+func testDeliver(t *testing.T, pdu codec.RequestPdu) {
+	dlv := pdu.(*Deliver)
 	resp := dlv.ToResponse(0).(*DeliverResp)
 	t.Logf("resp: %s", resp)
 

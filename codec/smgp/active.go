@@ -2,6 +2,8 @@ package smgp
 
 import (
 	"fmt"
+
+	"github.com/aaronwong1989/gosms/codec"
 )
 
 type ActiveTest MessageHeader
@@ -21,10 +23,11 @@ func (at *ActiveTest) Encode() []byte {
 	return (*MessageHeader)(at).Encode()
 }
 
-func (at *ActiveTest) Decode(header *MessageHeader, _ []byte) error {
-	at.PacketLength = header.PacketLength
-	at.RequestId = header.RequestId
-	at.SequenceId = header.SequenceId
+func (at *ActiveTest) Decode(header codec.IHead, _ []byte) error {
+	h := header.(*MessageHeader)
+	at.PacketLength = h.PacketLength
+	at.RequestId = h.RequestId
+	at.SequenceId = h.SequenceId
 	return nil
 }
 
@@ -44,10 +47,11 @@ func (resp *ActiveTestResp) Encode() []byte {
 	return (*MessageHeader)(resp).Encode()
 }
 
-func (resp *ActiveTestResp) Decode(header *MessageHeader, _ []byte) error {
-	resp.PacketLength = header.PacketLength
-	resp.RequestId = header.RequestId
-	resp.SequenceId = header.SequenceId
+func (resp *ActiveTestResp) Decode(header codec.IHead, _ []byte) error {
+	h := header.(*MessageHeader)
+	resp.PacketLength = h.PacketLength
+	resp.RequestId = h.RequestId
+	resp.SequenceId = h.SequenceId
 	return nil
 }
 

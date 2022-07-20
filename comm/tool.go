@@ -140,9 +140,9 @@ func RandNum(min, max int32) int {
 	return rand.Intn(int(max-min)) + int(min)
 }
 
-// DiceCheck 得到结果比给定数字小则返回true，否则返回false
+// DiceCheck 投概率骰子，得到结果比给定数字大则返回true，否则返回false
 func DiceCheck(prob float64) bool {
-	return float64(rand.Intn(10000))/10000.0 < prob
+	return float64(rand.Intn(10000))/10000.0 > prob
 }
 
 // SavePid 在程序执行的当前目录生成pid文件

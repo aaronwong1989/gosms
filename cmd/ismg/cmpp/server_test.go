@@ -42,7 +42,7 @@ var (
 	termChan  = make(chan struct{})
 
 	clients  = 1
-	duration = time.Second * 30
+	duration = time.Second * 1
 	// addr = "10.211.55.13:9000"
 	addr = ":9000"
 )

@@ -21,7 +21,8 @@ func TestNewDelivery(t *testing.T) {
 }
 
 func testcase(t *testing.T, msg string) {
-	d := NewDelivery("17011110000", msg, "", "")
+	pdu := NewDelivery("17011110000", msg, "", "")
+	d := pdu.(*Delivery)
 	t.Logf("%v", d)
 	bts := d.Encode()
 	t.Logf("len: %d, data: %x", len(bts), bts)

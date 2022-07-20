@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aaronwong1989/gosms/codec"
 	"github.com/aaronwong1989/gosms/comm"
 )
 
@@ -31,7 +32,7 @@ type DeliverResp struct {
 	status uint32
 }
 
-func NewDeliver(srcNo string, destNo string, txt string) *Deliver {
+func NewDeliver(srcNo string, destNo string, txt string) codec.RequestPdu {
 	baseLen := uint32(89)
 	head := &MessageHeader{PacketLength: baseLen, RequestId: CmdDeliver, SequenceId: uint32(Seq32.NextVal())}
 	dlv := &Deliver{MessageHeader: head}
@@ -97,12 +98,13 @@ func (dlv *Deliver) Encode() []byte {
 	return frame
 }
 
-func (dlv *Deliver) Decode(header *MessageHeader, frame []byte) error {
+func (dlv *Deliver) Decode(header codec.IHead, frame []byte) error {
+	h := header.(*MessageHeader)
 	// check
-	if header == nil || header.RequestId != CmdDeliver || uint32(len(frame)) < (header.PacketLength-HeadLength) {
+	if header == nil || h.RequestId != CmdDeliver || uint32(len(frame)) < (h.PacketLength-HeadLength) {
 		return ErrorPacket
 	}
-	dlv.MessageHeader = header
+	dlv.MessageHeader = h
 	var index int
 	dlv.msgId = frame[index : index+10]
 	index += 10
@@ -174,12 +176,13 @@ func (r *DeliverResp) Encode() []byte {
 	return frame
 }
 
-func (r *DeliverResp) Decode(header *MessageHeader, frame []byte) error {
+func (r *DeliverResp) Decode(header codec.IHead, frame []byte) error {
+	h := header.(*MessageHeader)
 	// check
-	if header == nil || header.RequestId != CmdDeliverResp || uint32(len(frame)) < (header.PacketLength-HeadLength) {
+	if header == nil || h.RequestId != CmdDeliverResp || uint32(len(frame)) < (h.PacketLength-HeadLength) {
 		return ErrorPacket
 	}
-	r.MessageHeader = header
+	r.MessageHeader = h
 	r.msgId = make([]byte, 10)
 	copy(r.msgId, frame[0:10])
 	r.status = binary.BigEndian.Uint32(frame[10:14])

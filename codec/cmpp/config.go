@@ -3,6 +3,7 @@ package cmpp
 import (
 	"errors"
 
+	"github.com/aaronwong1989/gosms/codec"
 	"github.com/aaronwong1989/gosms/comm/logging"
 	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
@@ -10,8 +11,8 @@ import (
 var log = logging.GetDefaultLogger()
 var ErrorPacket = errors.New("error packet")
 var Conf yml_config.YmlConfig
-var Seq32 Sequence32
-var Seq64 Sequence64
+var Seq32 codec.Sequence32
+var Seq64 codec.Sequence64
 
 // type Config struct {
 // 	// 公共参数

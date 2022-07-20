@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/aaronwong1989/gosms/codec"
 )
 
 type Connect struct {
@@ -53,12 +55,13 @@ func (connect *Connect) Encode() []byte {
 	return frame
 }
 
-func (connect *Connect) Decode(header *MessageHeader, frame []byte) error {
+func (connect *Connect) Decode(header codec.IHead, frame []byte) error {
 	// check
-	if header == nil || header.CommandId != CMPP_CONNECT || len(frame) < (39-HeadLength) {
+	h := header.(*MessageHeader)
+	if header == nil || h.CommandId != CMPP_CONNECT || len(frame) < (39-HeadLength) {
 		return ErrorPacket
 	}
-	connect.MessageHeader = header
+	connect.MessageHeader = h
 	connect.sourceAddr = string(frame[0:6])
 	connect.authenticatorSource = frame[6:22]
 	connect.version = frame[22]
@@ -148,17 +151,19 @@ func (resp *ConnectResp) Encode() []byte {
 	return frame
 }
 
-func (resp *ConnectResp) Decode(header *MessageHeader, frame []byte) error {
+func (resp *ConnectResp) Decode(header codec.IHead, frame []byte) error {
+	// check
+	h := header.(*MessageHeader)
 	bodyLen := 30
 	if V3() {
 		bodyLen = 33
 	}
 	// check
-	if header == nil || header.CommandId != CMPP_CONNECT_RESP || len(frame) < (bodyLen-HeadLength) {
+	if header == nil || h.CommandId != CMPP_CONNECT_RESP || len(frame) < (bodyLen-HeadLength) {
 		return ErrorPacket
 	}
 	var index int
-	resp.MessageHeader = header
+	resp.MessageHeader = h
 	if V3() {
 		resp.status = binary.BigEndian.Uint32(frame[0 : index+4])
 		index = 4

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/aaronwong1989/gosms/codec"
 )
 
 type Login struct {
@@ -60,12 +62,13 @@ func (lo *Login) Encode() []byte {
 	return frame
 }
 
-func (lo *Login) Decode(header *MessageHeader, frame []byte) error {
+func (lo *Login) Decode(header codec.IHead, frame []byte) error {
+	h := header.(*MessageHeader)
 	// check
-	if header == nil || header.RequestId != CmdLogin || len(frame) < (LoginLen-HeadLength) {
+	if header == nil || h.RequestId != CmdLogin || len(frame) < (LoginLen-HeadLength) {
 		return ErrorPacket
 	}
-	lo.MessageHeader = header
+	lo.MessageHeader = h
 	lo.clientID = string(frame[0:8])
 	lo.authenticatorClient = frame[8:24]
 	lo.loginMode = frame[24]
@@ -144,13 +147,14 @@ func (resp *LoginResp) Encode() []byte {
 	return frame
 }
 
-func (resp *LoginResp) Decode(header *MessageHeader, frame []byte) error {
+func (resp *LoginResp) Decode(header codec.IHead, frame []byte) error {
+	h := header.(*MessageHeader)
 	// check
-	if header == nil || header.RequestId != CmdLoginResp || len(frame) < (LoginRespLen-HeadLength) {
+	if h == nil || h.RequestId != CmdLoginResp || len(frame) < (LoginRespLen-HeadLength) {
 		return ErrorPacket
 	}
 	var index int
-	resp.MessageHeader = header
+	resp.MessageHeader = h
 	resp.status = binary.BigEndian.Uint32(frame[0 : index+4])
 	index = 4
 	resp.authenticatorServer = frame[index : index+16]
