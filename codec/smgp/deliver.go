@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"gosms/comm"
+	"github.com/aaronwong1989/gosms/comm"
 )
 
 type Deliver struct {
@@ -40,7 +40,7 @@ func NewDeliver(srcNo string, destNo string, txt string) *Deliver {
 	dlv.msgFormat = 15
 	dlv.recvTime = time.Now().Format("20060102150405")
 	dlv.srcTermID = srcNo
-	dlv.destTermID = Conf.DisplayNo + destNo
+	dlv.destTermID = Conf.GetString("sms-display-no") + destNo
 	// 上行最长70字符
 	subTxt := txt
 	rs := []rune(txt)

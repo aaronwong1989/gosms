@@ -2,76 +2,53 @@ package smgp
 
 import (
 	"errors"
-	"io/ioutil"
-	"os"
-	"time"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
-	"gopkg.in/yaml.v3"
 
-	"gosms/comm/logging"
+	"github.com/aaronwong1989/gosms/comm/logging"
+	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 var log = logging.GetDefaultLogger()
-var Conf = NewConfig()
 var ErrorPacket = errors.New("error packet")
 var GbEncoder = simplifiedchinese.GB18030.NewEncoder()
 var GbDecoder = simplifiedchinese.GB18030.NewDecoder()
+var Conf yml_config.YmlConfig
 var Seq32 Sequence32
 var Seq80 Sequence80
 
-type Config struct {
-	// 公共参数
-	ClientId           string        `yaml:"client-id"`
-	SharedSecret       string        `yaml:"shared-secret"`
-	AuthCheck          bool          `yaml:"auth-check"`
-	Version            byte          `yaml:"version"`
-	MaxCons            int           `yaml:"max-cons"`
-	ActiveTestDuration time.Duration `yaml:"active-test-duration"`
-	DataCenterId       int32         `yaml:"datacenter-id"`
-	WorkerId           int32         `yaml:"worker-id"`
-	SmgwId             string        `yaml:"smgw-id"`
-	ReceiveWindowSize  int           `yaml:"receive-window-size"`
-	MaxPoolSize        int           `yaml:"max-pool-size"`
-
-	// MT消息相关
-	NeedReport    byte          `yaml:"need-report"`
-	Priority      byte          `yaml:"priority "`
-	DisplayNo     string        `yaml:"sms-display-no"`
-	ServiceId     string        `yaml:"service-id"`
-	FeeType       string        `yaml:"fee-type"`
-	FeeCode       string        `yaml:"fee-code"`
-	ChargeTermID  string        `yaml:"charge-term-id"`
-	FixedFee      string        `yaml:"fixed-fee"`
-	LinkID        string        `yaml:"link-id"`
-	ValidDuration time.Duration `yaml:"default-valid-duration"`
-
-	// 模拟网关相关参数
-	SuccessRate     int32 `yaml:"success-rate"`
-	MinSubmitRespMs int32 `yaml:"min-submit-resp-ms"`
-	MaxSubmitRespMs int32 `yaml:"max-submit-resp-ms"`
-	FixReportRespMs int32 `yaml:"fix-report-resp-ms"`
-}
-
-func NewConfig() *Config {
-	var conf Config
-	path := os.Getenv("ISMG_CONF_PATH")
-	if len(path) == 0 {
-		// TODO define your default fallback path
-		path = "/Users/huangzhonghui/GolandProjects/gosms/cmd/ismg/smgp/smgp.yaml"
-	}
-	log.Infof("[Conf     ] path=%s", path)
-	config, err := ioutil.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	err = yaml.Unmarshal(config, &conf)
-	log.Infof("[Conf     ] %+v", conf)
-	if err != nil {
-		panic(err)
-	}
-	return &conf
-}
+// type Config struct {
+// 	// 公共参数
+// 	ClientId           string        `yaml:"client-id"`
+// 	SharedSecret       string        `yaml:"shared-secret"`
+// 	AuthCheck          bool          `yaml:"auth-check"`
+// 	Version            byte          `yaml:"version"`
+// 	MaxCons            int           `yaml:"max-cons"`
+// 	ActiveTestDuration time.Duration `yaml:"active-test-duration"`
+// 	DataCenterId       int32         `yaml:"datacenter-id"`
+// 	WorkerId           int32         `yaml:"worker-id"`
+// 	SmgwId             string        `yaml:"smgw-id"`
+// 	ReceiveWindowSize  int           `yaml:"receive-window-size"`
+// 	MaxPoolSize        int           `yaml:"max-pool-size"`
+//
+// 	// MT消息相关
+// 	NeedReport    byte          `yaml:"need-report"`
+// 	Priority      byte          `yaml:"priority "`
+// 	DisplayNo     string        `yaml:"sms-display-no"`
+// 	ServiceId     string        `yaml:"service-id"`
+// 	FeeType       string        `yaml:"fee-type"`
+// 	FeeCode       string        `yaml:"fee-code"`
+// 	ChargeTermID  string        `yaml:"charge-term-id"`
+// 	FixedFee      string        `yaml:"fixed-fee"`
+// 	LinkID        string        `yaml:"link-id"`
+// 	ValidDuration time.Duration `yaml:"default-valid-duration"`
+//
+// 	// 模拟网关相关参数
+// 	SuccessRate     float64 `yaml:"success-rate"`
+// 	MinSubmitRespMs int32   `yaml:"min-submit-resp-ms"`
+// 	MaxSubmitRespMs int32   `yaml:"max-submit-resp-ms"`
+// 	FixReportRespMs int32   `yaml:"fix-report-resp-ms"`
+// }
 
 const (
 	TP_pid           = uint16(0x0001)

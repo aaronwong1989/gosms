@@ -11,10 +11,10 @@ func TestLogin_Decode(t *testing.T) {
 	for i > 0 {
 		lo := NewLogin()
 		t.Logf("login   : %s", lo)
-		assert.True(t, lo.clientID == Conf.ClientId)
+		assert.True(t, lo.clientID == Conf.GetString("client-id"))
 		resp := lo.ToResponse(0).(*LoginResp)
 		t.Logf("resp    : %s", resp)
-		assert.True(t, lo.clientID == Conf.ClientId)
+		assert.True(t, lo.clientID == Conf.GetString("client-id"))
 
 		dt1 := lo.Encode()
 		dt2 := resp.Encode()

@@ -2,7 +2,19 @@ package smgp
 
 import (
 	"testing"
+
+	"github.com/aaronwong1989/gosms/comm"
+	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
+
+func init() {
+	Conf = yml_config.CreateYamlFactory("smgp.yaml")
+	dc := Conf.GetInt("data-center-id")
+	wk := Conf.GetInt("worker-id")
+	smgwId := Conf.GetString("smgw-id")
+	Seq32 = comm.NewCycleSequence(int32(dc), int32(wk))
+	Seq80 = comm.NewBcdSequence(smgwId)
+}
 
 func TestActiveTest(t *testing.T) {
 	at := NewActiveTest()

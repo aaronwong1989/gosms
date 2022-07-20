@@ -3,7 +3,7 @@ package smgp
 import (
 	"time"
 
-	"gosms/comm"
+	"github.com/aaronwong1989/gosms/comm"
 )
 
 type MtOptions struct {
@@ -16,18 +16,20 @@ type MtOptions struct {
 }
 
 func (s *Submit) SetOptions(options MtOptions) {
-	s.needReport = Conf.NeedReport
-	if options.needReport != Conf.NeedReport {
+	s.needReport = byte(Conf.GetInt("need-report"))
+	// 有点小bug，不能通过传参的方式设置未变量的"零值"
+	if options.needReport != 0 {
 		s.needReport = options.needReport
 	}
 
-	s.priority = Conf.Priority
-	if options.priority != Conf.Priority {
+	s.priority = byte(Conf.GetInt("priority"))
+	// 有点小bug，不能通过传参的方式设置未变量的"零值"
+	if options.priority != 0 {
 		s.priority = options.priority
 	}
 
-	s.serviceID = Conf.ServiceId
-	if options.serviceID != Conf.ServiceId {
+	s.serviceID = Conf.GetString("service-id")
+	if options.serviceID != "" {
 		s.serviceID = options.serviceID
 	}
 
@@ -41,11 +43,11 @@ func (s *Submit) SetOptions(options MtOptions) {
 	if options.validDuration != 0 {
 		vt.Add(options.validDuration)
 	} else {
-		vt.Add(Conf.ValidDuration)
+		vt.Add(Conf.GetDuration("default-valid-duration"))
 	}
 	s.validTime = comm.FormatTime(vt)
 
-	s.srcTermID = Conf.DisplayNo
+	s.srcTermID = Conf.GetString("sms-display-no")
 	if options.srcTermID != "" {
 		s.srcTermID += options.srcTermID
 	}

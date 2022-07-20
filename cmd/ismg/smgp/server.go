@@ -11,9 +11,9 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 
-	"gosms/codec/smgp"
-	"gosms/comm"
-	"gosms/comm/logging"
+	"github.com/aaronwong1989/gosms/codec/smgp"
+	"github.com/aaronwong1989/gosms/comm"
+	"github.com/aaronwong1989/gosms/comm/logging"
 )
 
 type Server struct {
@@ -27,6 +27,11 @@ type Server struct {
 	window    chan struct{}
 }
 
+var (
+	poolSize   int
+	windowSize int
+)
+
 func StartServer() {
 	var port int
 	var multicore bool
@@ -34,18 +39,20 @@ func StartServer() {
 	flag.BoolVar(&multicore, "multicore", true, "--multicore=true")
 	flag.Parse()
 
-	log.Infof("current pid is %s.", comm.SavePid("smgp.pid"))
+	poolSize = smgp.Conf.GetInt("max-pool-size")
+	windowSize = smgp.Conf.GetInt("receive-window-size")
+
 	// 定义异步工作Go程池
 	options := ants.Options{
-		ExpiryDuration:   time.Minute,           // 1 分钟内不被使用的worker会被清除
-		Nonblocking:      false,                 // 如果为true,worker池满了后提交任务会直接返回nil
-		MaxBlockingTasks: smgp.Conf.MaxPoolSize, // blocking模式有效，否则worker池满了后提交任务会直接返回nil
+		ExpiryDuration:   time.Minute, // 1 分钟内不被使用的worker会被清除
+		Nonblocking:      false,       // 如果为true,worker池满了后提交任务会直接返回nil
+		MaxBlockingTasks: poolSize,    // blocking模式有效，否则worker池满了后提交任务会直接返回nil
 		PreAlloc:         false,
 		PanicHandler: func(e interface{}) {
 			log.Errorf("%v", e)
 		},
 	}
-	pool, _ := ants.NewPool(smgp.Conf.MaxPoolSize, ants.WithOptions(options))
+	pool, _ := ants.NewPool(poolSize, ants.WithOptions(options))
 	defer pool.Release()
 
 	ss := &Server{
@@ -53,10 +60,11 @@ func StartServer() {
 		address:   fmt.Sprintf(":%d", port),
 		multicore: multicore,
 		pool:      pool,
-		window:    make(chan struct{}, smgp.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
+		window:    make(chan struct{}, windowSize), // 用通道控制消息接收窗口
 	}
 
 	comm.StartMonitor(port)
+	log.Infof("current pid is %s.", comm.SavePid("smgp.pid"))
 
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
@@ -78,10 +86,10 @@ func (s *Server) OnShutdown(eng gnet.Engine) {
 }
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	if s.countConn() >= smgp.Conf.MaxCons {
+	if s.countConn() >= smgp.Conf.GetInt("max-cons") {
 		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：connections threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		return nil, gnet.Close
-	} else if len(s.window) == smgp.Conf.ReceiveWindowSize {
+	} else if len(s.window) == windowSize {
 		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：receive window threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		// 已达到窗口时，拒绝新的连接
 		return nil, gnet.Close
@@ -155,7 +163,7 @@ func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 		}
 		return true
 	})
-	return smgp.Conf.ActiveTestDuration, gnet.None
+	return smgp.Conf.GetDuration("active-test-duration"), gnet.None
 }
 
 func (s *Server) countConn() int {
@@ -188,7 +196,7 @@ func handleLogin(s *Server, c gnet.Conn, header *smgp.MessageHeader) gnet.Action
 		log.Errorf("[%-9s] LOGIN ERROR: Auth Error, status=(%d,%s)", "OnTraffic", resp.Status(), smgp.ConnectStatusMap[resp.Status()])
 	}
 
-	// send cmpp_connect_resp async
+	// send smgp_connect_resp async
 	_ = s.pool.Submit(func() {
 		err = c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
@@ -210,7 +218,7 @@ func handleLogin(s *Server, c gnet.Conn, header *smgp.MessageHeader) gnet.Action
 func handleExit(s *Server, c gnet.Conn, header *smgp.MessageHeader) gnet.Action {
 	log.Infof("[%-9s] <<< %s", "OnTraffic", header)
 	resp := smgp.NewExitResp(header.SequenceId)
-	// send cmpp_connect_resp async
+	// send smgp_connect_resp async
 	_ = s.pool.Submit(func() {
 		err := c.AsyncWrite(resp.Encode(), func(c gnet.Conn) error {
 			log.Infof("[%-9s] >>> %s", "OnTraffic", resp)
@@ -255,11 +263,10 @@ func handleDelivery(s *Server, c gnet.Conn, header *smgp.MessageHeader) gnet.Act
 	// handle message async
 	_ = s.pool.Submit(func() {
 		// 模拟消息处理耗时
-		processTime := time.Duration(comm.RandNum(smgp.Conf.MinSubmitRespMs, smgp.Conf.MaxSubmitRespMs))
-		time.Sleep(processTime * time.Millisecond)
+		_ = processTime()
 
 		rtCode := uint32(0)
-		if comm.DiceCheck(smgp.Conf.SuccessRate) {
+		if comm.DiceCheck(smgp.Conf.GetFloat64("success-rate")) {
 			// 失败消息的返回码
 			rtCode = 39
 		}
@@ -330,14 +337,10 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *smgp.Submit) func() {
 		}()
 
 		// 模拟消息处理耗时，可配置
-		processTime := time.Duration(0)
-		if smgp.Conf.MinSubmitRespMs > 0 && smgp.Conf.MaxSubmitRespMs > smgp.Conf.MinSubmitRespMs {
-			processTime = time.Duration(comm.RandNum(smgp.Conf.MinSubmitRespMs, smgp.Conf.MaxSubmitRespMs))
-			time.Sleep(processTime * time.Millisecond)
-		}
+		processTime := processTime()
 
 		rtCode := uint32(0)
-		if comm.DiceCheck(smgp.Conf.SuccessRate) {
+		if comm.DiceCheck(smgp.Conf.GetFloat64("success-rate")) {
 			// 失败消息的返回码
 			rtCode = 39
 		}
@@ -360,13 +363,14 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *smgp.Submit) func() {
 
 func reportAsyncSender(c gnet.Conn, sub *smgp.Submit, msgId []byte, wait time.Duration) func() {
 	return func() {
-		if comm.DiceCheck(100) {
+		if comm.DiceCheck(smgp.Conf.GetFloat64("success-rate")) {
 			return
 		}
 		dly := smgp.NewDeliveryReport(sub, msgId)
 		// 模拟状态报告发送前的耗时
-		if smgp.Conf.FixReportRespMs > 0 {
-			processTime := wait + time.Duration(smgp.Conf.FixReportRespMs)
+		ms := smgp.Conf.GetInt("fix-report-resp-ms")
+		if ms > 0 {
+			processTime := wait + time.Duration(ms)
 			time.Sleep(processTime * time.Millisecond)
 		}
 		// 发送状态报告
@@ -417,7 +421,7 @@ func getHeader(c gnet.Conn) *smgp.MessageHeader {
 }
 
 func checkReceiveWindow(s *Server, c gnet.Conn, header *smgp.MessageHeader) gnet.Action {
-	if len(s.window) == smgp.Conf.ReceiveWindowSize && header.RequestId == smgp.CmdSubmit {
+	if len(s.window) == windowSize && header.RequestId == smgp.CmdSubmit {
 		log.Warnf("[%-9s] FLOW CONTROL：receive window threshold reached.", "OnTraffic")
 		l := int(header.PacketLength - smgp.HeadLength)
 		discard, err := c.Discard(l)
@@ -439,4 +443,17 @@ func checkReceiveWindow(s *Server, c gnet.Conn, header *smgp.MessageHeader) gnet
 		header.RequestId = 0
 	}
 	return gnet.None
+}
+
+func processTime() time.Duration {
+	// 模拟消息处理耗时，可配置
+	processTime := time.Duration(0)
+	if smgp.Conf.GetInt("min-submit-resp-ms") > 0 && smgp.Conf.GetInt("max-submit-resp-ms") > smgp.Conf.GetInt("min-submit-resp-ms") {
+		processTime := time.Duration(comm.RandNum(
+			int32(smgp.Conf.GetInt("min-submit-resp-ms")),
+			int32(smgp.Conf.GetInt("max-submit-resp-ms")),
+		))
+		time.Sleep(processTime * time.Millisecond)
+	}
+	return processTime
 }

@@ -24,4 +24,6 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o smgp.ismg
 # 制作软件发布包
 chmod +x smgp.ismg
 chmod +x start.sh
+cp -rf ../../../config ./
 tar -zcvf smgp.ismg.tar.gz smgp.ismg smgp.yaml start.sh
+rm -rf ./config

@@ -2,17 +2,25 @@ package cmpp
 
 import (
 	"encoding/binary"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aaronwong1989/gosms/comm"
 	"github.com/aaronwong1989/gosms/comm/snowflake"
+	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 func init() {
-	Seq32 = comm.NewCycleSequence(1, 1)
-	Seq64 = snowflake.NewSnowflake(2, 3)
+	rand.Seed(time.Now().Unix()) // 随机种子
+	Conf = yml_config.CreateYamlFactory("cmpp.yaml")
+	dc := Conf.GetInt("data-center-id")
+	wk := Conf.GetInt("worker-id")
+	Seq32 = comm.NewCycleSequence(int32(dc), int32(wk))
+	Seq64 = snowflake.NewSnowflake(int64(dc), int64(wk))
+	ReportSeq = comm.NewCycleSequence(int32(dc), int32(wk))
 }
 
 func TestMessageHeader_Encode(t *testing.T) {

@@ -10,4 +10,4 @@ mkdir -p ~/smgp
 mv smgp.ismg ~/smgp/
 mv main.test ~/smgp/
 cp start.sh ~/smgp/
-cp -f smgp.yaml ~/.smgp.yaml
+cp -rf ../../../config ~/smgp/

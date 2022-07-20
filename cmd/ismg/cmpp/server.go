@@ -391,7 +391,7 @@ func processTime() time.Duration {
 
 func reportAsyncSender(c gnet.Conn, sub *cmpp.Submit, msgId uint64, wait time.Duration) func() {
 	return func() {
-		if comm.DiceCheck(100) {
+		if comm.DiceCheck(cmpp.Conf.GetFloat64("success-rate")) {
 			return
 		}
 		dly := sub.ToDeliveryReport(msgId)

@@ -14,14 +14,19 @@ import (
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 	"github.com/stretchr/testify/assert"
 
-	"gosms/codec/smgp"
-	"gosms/comm"
+	"github.com/aaronwong1989/gosms/codec/smgp"
+	"github.com/aaronwong1989/gosms/comm"
+	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 func init() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	smgp.Seq32 = comm.NewCycleSequence(smgp.Conf.DataCenterId, smgp.Conf.WorkerId)
-	smgp.Seq80 = comm.NewBcdSequence(smgp.Conf.SmgwId)
+	smgp.Conf = yml_config.CreateYamlFactory("smgp.yaml")
+	dc := smgp.Conf.GetInt("data-center-id")
+	wk := smgp.Conf.GetInt("worker-id")
+	smgwId := smgp.Conf.GetString("smgw-id")
+	smgp.Seq32 = comm.NewCycleSequence(int32(dc), int32(wk))
+	smgp.Seq80 = comm.NewBcdSequence(smgwId)
 }
 
 var (

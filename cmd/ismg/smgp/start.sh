@@ -6,7 +6,6 @@ pkill smgp.ismg
 # -1=debug, 0=info, 1=warn..., default to info
 export GNET_LOGGING_LEVEL=0
 export GNET_LOGGING_FILE="/Users/huangzhonghui/logs/smgp.log"
-export ISMG_CONF_PATH="/Users/huangzhonghui/.smgp.yaml"
 
 mkdir -p /Users/huangzhonghui/logs
 

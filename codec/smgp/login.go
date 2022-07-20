@@ -36,7 +36,7 @@ func NewLogin() *Login {
 	header.RequestId = CmdLogin
 	header.SequenceId = uint32(Seq32.NextVal())
 	lo.MessageHeader = header
-	lo.clientID = Conf.ClientId
+	lo.clientID = Conf.GetString("client-id")
 	lo.loginMode = 2
 	ts, _ := strconv.ParseUint(time.Now().Format("0102150405"), 10, 32)
 	lo.timestamp = uint32(ts)
@@ -44,7 +44,7 @@ func NewLogin() *Login {
 	// lo.timestamp = uint32(705192634)
 	ss := reqAuthMd5(lo)
 	lo.authenticatorClient = ss[:]
-	lo.version = Conf.Version
+	lo.version = byte(Conf.GetInt("version"))
 	return lo
 }
 
@@ -81,7 +81,7 @@ func (lo *Login) String() string {
 
 func (lo *Login) Check() uint32 {
 	// 大版本不匹配
-	if lo.version&0xf0 != Conf.Version&0xf0 {
+	if lo.version&0xf0 != byte(Conf.GetInt("version"))&0xf0 {
 		return 22
 	}
 
@@ -91,7 +91,7 @@ func (lo *Login) Check() uint32 {
 	log.Debugf("[AuthCheck] compute: %x", authMd5)
 	i := bytes.Compare(authSource, authMd5[:])
 	// 配置不做校验或校验通过时返回0
-	if !Conf.AuthCheck || i == 0 {
+	if !Conf.GetBool("auth-check") || i == 0 {
 		return 0
 	}
 	return 21
@@ -112,18 +112,18 @@ func (lo *Login) ToResponse(code uint32) interface{} {
 	authDt := make([]byte, 0, 64)
 	authDt = append(authDt, fmt.Sprintf("%d", response.status)...)
 	authDt = append(authDt, lo.authenticatorClient...)
-	authDt = append(authDt, Conf.SharedSecret...)
+	authDt = append(authDt, Conf.GetString("shared-secret")...)
 	auth := md5.Sum(authDt)
 	response.authenticatorServer = auth[:]
-	response.version = Conf.Version
+	response.version = byte(Conf.GetInt("version"))
 	return response
 }
 
 func reqAuthMd5(connect *Login) [16]byte {
 	authDt := make([]byte, 0, 64)
-	authDt = append(authDt, Conf.ClientId...)
+	authDt = append(authDt, Conf.GetString("client-id")...)
 	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0)
-	authDt = append(authDt, Conf.SharedSecret...)
+	authDt = append(authDt, Conf.GetString("shared-secret")...)
 	authDt = append(authDt, fmt.Sprintf("%010d", connect.timestamp)...)
 	log.Debugf("[AuthCheck] auth data: %x", authDt)
 	authMd5 := md5.Sum(authDt)

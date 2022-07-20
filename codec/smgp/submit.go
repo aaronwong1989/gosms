@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"gosms/comm"
+	"github.com/aaronwong1989/gosms/comm"
 )
 
 type Submit struct {
@@ -47,10 +47,10 @@ func NewSubmit(phones []string, content string, options MtOptions) (messages []*
 	mt.SetOptions(options)
 	mt.msgType = 6
 	// 从配置文件设置属性
-	mt.feeType = Conf.FeeType
-	mt.feeCode = Conf.FeeCode
-	mt.chargeTermID = Conf.ChargeTermID
-	mt.fixedFee = Conf.FixedFee
+	mt.feeType = Conf.GetString("fee-type")
+	mt.feeCode = Conf.GetString("fee-code")
+	mt.chargeTermID = Conf.GetString("charge-term-id")
+	mt.fixedFee = Conf.GetString("fixed-fee")
 	// 初步设置入参
 	mt.destTermID = phones
 	mt.destTermIDCount = byte(len(phones))

@@ -6,15 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"gosms/comm"
-	"gosms/comm/snowflake32"
 )
-
-func init() {
-	Seq32 = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
-	Seq80 = comm.NewBcdSequence(Conf.SmgwId)
-}
 
 func TestNewSubmit(t *testing.T) {
 	subs := NewSubmit([]string{"17600001111", "17700001111"}, Poem, MtOptions{atTime: time.Now().Add(time.Minute)})
