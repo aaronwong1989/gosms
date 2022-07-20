@@ -57,19 +57,16 @@ func CreateYamlFactory(fileName ...string) YmlConfig {
 		yamlConfig.SetConfigName(fileName[0])
 	}
 	// 设置配置文件类型(后缀)为 yml
-	yamlConfig.SetConfigType("yaml")
+	yamlConfig.SetConfigType("yml")
 
 	if err := yamlConfig.ReadInConfig(); err != nil {
 		log.Fatalf("配置文件初始化失败：", err.Error())
 	}
 
-	conf := &ymlLoader{
+	return &ymlLoader{
 		viper: yamlConfig,
 		mu:    new(sync.Mutex),
 	}
-	conf.ConfigFileChangeListen()
-
-	return conf
 }
 
 type ymlLoader struct {

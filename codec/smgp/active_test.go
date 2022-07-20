@@ -8,7 +8,9 @@ import (
 )
 
 func init() {
-	Conf = yml_config.CreateYamlFactory("smgp.yaml")
+	Conf = yml_config.CreateYamlFactory("smgp")
+	Conf.ConfigFileChangeListen()
+
 	dc := Conf.GetInt("data-center-id")
 	wk := Conf.GetInt("worker-id")
 	smgwId := Conf.GetString("smgw-id")

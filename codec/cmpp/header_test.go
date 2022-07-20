@@ -15,7 +15,9 @@ import (
 
 func init() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	Conf = yml_config.CreateYamlFactory("cmpp.yaml")
+	Conf = yml_config.CreateYamlFactory("cmpp")
+	Conf.ConfigFileChangeListen()
+
 	dc := Conf.GetInt("data-center-id")
 	wk := Conf.GetInt("worker-id")
 	Seq32 = comm.NewCycleSequence(int32(dc), int32(wk))

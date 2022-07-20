@@ -14,7 +14,10 @@ var log = logging.GetDefaultLogger()
 
 func main() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	smgp.Conf = yml_config.CreateYamlFactory("smgp.yaml")
+
+	smgp.Conf = yml_config.CreateYamlFactory("smgp")
+	smgp.Conf.ConfigFileChangeListen()
+
 	dc := smgp.Conf.GetInt("data-center-id")
 	wk := smgp.Conf.GetInt("worker-id")
 	smgwId := smgp.Conf.GetString("smgw-id")

@@ -22,7 +22,9 @@ import (
 
 func init() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	cmpp.Conf = yml_config.CreateYamlFactory("cmpp.yaml")
+	cmpp.Conf = yml_config.CreateYamlFactory("cmpp")
+	cmpp.Conf.ConfigFileChangeListen()
+
 	dc := cmpp.Conf.GetInt("data-center-id")
 	wk := cmpp.Conf.GetInt("worker-id")
 	cmpp.Seq32 = comm.NewCycleSequence(int32(dc), int32(wk))

@@ -27,5 +27,5 @@ func TestUcs2Encode(t *testing.T) {
 }
 
 func TestDiceCheck(t *testing.T) {
-	assert.True(t, DiceCheck(0.99))
+	assert.False(t, DiceCheck(1))
 }
