@@ -13,9 +13,9 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 
-	"gosms/codec/cmpp"
-	"gosms/comm"
-	"gosms/comm/logging"
+	"github.com/aaronwong1989/gosms/codec/cmpp"
+	"github.com/aaronwong1989/gosms/comm"
+	"github.com/aaronwong1989/gosms/comm/logging"
 )
 
 type Server struct {
@@ -29,6 +29,11 @@ type Server struct {
 	window    chan struct{}
 }
 
+var (
+	poolSize   int
+	windowSize int
+)
+
 func StartServer() {
 	var port int
 	var multicore bool
@@ -36,18 +41,21 @@ func StartServer() {
 	flag.BoolVar(&multicore, "multicore", true, "--multicore=true")
 	flag.Parse()
 
-	log.Infof("current pid is %s.", comm.SavePid("cmpp.pid"))
+	// 获取配置信息
+	poolSize = cmpp.Conf.GetInt("max-pool-size")
+	windowSize = cmpp.Conf.GetInt("receive-window-size")
+
 	// 定义异步工作Go程池
 	options := ants.Options{
-		ExpiryDuration:   time.Minute,           // 1 分钟内不被使用的worker会被清除
-		Nonblocking:      false,                 // 如果为true,worker池满了后提交任务会直接返回nil
-		MaxBlockingTasks: cmpp.Conf.MaxPoolSize, // blocking模式有效，否则worker池满了后提交任务会直接返回nil
+		ExpiryDuration:   time.Minute, // 1 分钟内不被使用的worker会被清除
+		Nonblocking:      false,       // 如果为true,worker池满了后提交任务会直接返回nil
+		MaxBlockingTasks: poolSize,    // blocking模式有效，否则worker池满了后提交任务会直接返回nil
 		PreAlloc:         false,
 		PanicHandler: func(e interface{}) {
 			log.Errorf("%v", e)
 		},
 	}
-	pool, _ := ants.NewPool(cmpp.Conf.MaxPoolSize, ants.WithOptions(options))
+	pool, _ := ants.NewPool(poolSize, ants.WithOptions(options))
 	defer pool.Release()
 
 	ss := &Server{
@@ -55,10 +63,11 @@ func StartServer() {
 		address:   fmt.Sprintf(":%d", port),
 		multicore: multicore,
 		pool:      pool,
-		window:    make(chan struct{}, cmpp.Conf.ReceiveWindowSize), // 用通道控制消息接收窗口
+		window:    make(chan struct{}, windowSize), // 用通道控制消息接收窗口
 	}
 
 	startMonitor(port)
+	log.Infof("current pid is %s.", comm.SavePid("cmpp.pid"))
 
 	err := gnet.Run(ss, ss.protocol+"://"+ss.address, gnet.WithMulticore(multicore), gnet.WithTicker(true))
 	log.Errorf("server(%s://%s) exits with error: %v", ss.protocol, ss.address, err)
@@ -91,10 +100,10 @@ func (s *Server) OnShutdown(eng gnet.Engine) {
 }
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	if s.countConn() >= cmpp.Conf.MaxCons {
+	if s.countConn() >= cmpp.Conf.GetInt("max-cons") {
 		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：connections threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		return nil, gnet.Close
-	} else if len(s.window) == cmpp.Conf.ReceiveWindowSize {
+	} else if len(s.window) == windowSize {
 		log.Warnf("[%-9s] [%v<->%v] FLOW CONTROL：receive window threshold reached, closing new connection...", "OnOpen", c.RemoteAddr(), c.LocalAddr())
 		// 已达到窗口时，拒绝新的连接
 		return nil, gnet.Close
@@ -169,7 +178,7 @@ func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 		}
 		return true
 	})
-	return cmpp.Conf.ActiveTestDuration, gnet.None
+	return cmpp.Conf.GetDuration("active-test-duration"), gnet.None
 }
 
 func (s *Server) countConn() int {
@@ -186,7 +195,7 @@ func (s *Server) activeCons() int {
 }
 
 func handleConnect(s *Server, c gnet.Conn, header *cmpp.MessageHeader) gnet.Action {
-	frame := comm.TakeBytes(c, 39-cmpp.HEAD_LENGTH)
+	frame := comm.TakeBytes(c, 39-cmpp.HeadLength)
 	comm.LogHex(logging.DebugLevel, "Connect", frame)
 
 	connect := &cmpp.Connect{}
@@ -257,7 +266,7 @@ func handleDelivery(s *Server, c gnet.Conn, header *cmpp.MessageHeader) gnet.Act
 		return gnet.Close
 	}
 
-	frame := comm.TakeBytes(c, int(header.TotalLength-cmpp.HEAD_LENGTH))
+	frame := comm.TakeBytes(c, int(header.TotalLength-cmpp.HeadLength))
 	comm.LogHex(logging.DebugLevel, "Delivery", frame)
 	dly := &cmpp.Delivery{}
 	err := dly.Decode(header, frame)
@@ -269,11 +278,10 @@ func handleDelivery(s *Server, c gnet.Conn, header *cmpp.MessageHeader) gnet.Act
 	// handle message async
 	_ = s.pool.Submit(func() {
 		// 模拟消息处理耗时
-		processTime := time.Duration(comm.RandNum(cmpp.Conf.MinSubmitRespMs, cmpp.Conf.MaxSubmitRespMs))
-		time.Sleep(processTime * time.Millisecond)
+		_ = processTime()
 
 		rtCode := uint32(0)
-		if comm.DiceCheck(cmpp.Conf.SuccessRate) {
+		if comm.DiceCheck(cmpp.Conf.GetFloat64("success-rate")) {
 			// 失败消息的返回码
 			rtCode = 9
 		}
@@ -298,7 +306,7 @@ func handleDeliveryResp(s *Server, c gnet.Conn, header *cmpp.MessageHeader) gnet
 		log.Warnf("[%-9s] unLogin connection: %s, closing...", "OnTraffic", c.RemoteAddr())
 		return gnet.Close
 	}
-	frame := comm.TakeBytes(c, int(header.TotalLength-cmpp.HEAD_LENGTH))
+	frame := comm.TakeBytes(c, int(header.TotalLength-cmpp.HeadLength))
 	comm.LogHex(logging.DebugLevel, "Deliver", frame)
 
 	resp := &cmpp.DeliveryResp{}
@@ -320,7 +328,7 @@ func handleSubmit(s *Server, c gnet.Conn, header *cmpp.MessageHeader) gnet.Actio
 		return gnet.Close
 	}
 
-	frame := comm.TakeBytes(c, int(header.TotalLength-cmpp.HEAD_LENGTH))
+	frame := comm.TakeBytes(c, int(header.TotalLength-cmpp.HeadLength))
 	comm.LogHex(logging.DebugLevel, "Submit", frame)
 	sub := &cmpp.Submit{}
 	err := sub.Decode(header, frame)
@@ -343,15 +351,11 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *cmpp.Submit) func() {
 			<-s.window
 		}()
 
-		// 模拟消息处理耗时，可配置
-		processTime := time.Duration(0)
-		if cmpp.Conf.MinSubmitRespMs > 0 && cmpp.Conf.MaxSubmitRespMs > cmpp.Conf.MinSubmitRespMs {
-			processTime = time.Duration(comm.RandNum(cmpp.Conf.MinSubmitRespMs, cmpp.Conf.MaxSubmitRespMs))
-			time.Sleep(processTime * time.Millisecond)
-		}
+		// 模拟消息处理耗时
+		processTime := processTime()
 
 		rtCode := uint32(0)
-		if comm.DiceCheck(cmpp.Conf.SuccessRate) {
+		if comm.DiceCheck(cmpp.Conf.GetFloat64("success-rate")) {
 			// 失败消息的返回码
 			rtCode = 13
 		}
@@ -372,6 +376,19 @@ func mtAsyncHandler(s *Server, c gnet.Conn, sub *cmpp.Submit) func() {
 	}
 }
 
+func processTime() time.Duration {
+	// 模拟消息处理耗时，可配置
+	processTime := time.Duration(0)
+	if cmpp.Conf.GetInt("min-submit-resp-ms") > 0 && cmpp.Conf.GetInt("max-submit-resp-ms") > cmpp.Conf.GetInt("min-submit-resp-ms") {
+		processTime := time.Duration(comm.RandNum(
+			int32(cmpp.Conf.GetInt("min-submit-resp-ms")),
+			int32(cmpp.Conf.GetInt("max-submit-resp-ms")),
+		))
+		time.Sleep(processTime * time.Millisecond)
+	}
+	return processTime
+}
+
 func reportAsyncSender(c gnet.Conn, sub *cmpp.Submit, msgId uint64, wait time.Duration) func() {
 	return func() {
 		if comm.DiceCheck(100) {
@@ -379,8 +396,9 @@ func reportAsyncSender(c gnet.Conn, sub *cmpp.Submit, msgId uint64, wait time.Du
 		}
 		dly := sub.ToDeliveryReport(msgId)
 		// 模拟状态报告发送前的耗时
-		if cmpp.Conf.FixReportRespMs > 0 {
-			processTime := wait + time.Duration(cmpp.Conf.FixReportRespMs)
+		ms := cmpp.Conf.GetInt("fix-report-resp-ms")
+		if ms > 0 {
+			processTime := wait + time.Duration(ms)
 			time.Sleep(processTime * time.Millisecond)
 		}
 		// 发送状态报告
@@ -419,7 +437,7 @@ func handActiveResp(c gnet.Conn, header *cmpp.MessageHeader) (action gnet.Action
 }
 
 func getHeader(c gnet.Conn) *cmpp.MessageHeader {
-	frame := comm.TakeBytes(c, cmpp.HEAD_LENGTH)
+	frame := comm.TakeBytes(c, cmpp.HeadLength)
 	if frame == nil {
 		return nil
 	}
@@ -435,9 +453,9 @@ func getHeader(c gnet.Conn) *cmpp.MessageHeader {
 }
 
 func checkReceiveWindow(s *Server, c gnet.Conn, header *cmpp.MessageHeader) gnet.Action {
-	if len(s.window) == cmpp.Conf.ReceiveWindowSize && header.CommandId == cmpp.CMPP_SUBMIT {
+	if len(s.window) == windowSize && header.CommandId == cmpp.CMPP_SUBMIT {
 		log.Warnf("[%-9s] FLOW CONTROL：receive window threshold reached.", "OnTraffic")
-		l := int(header.TotalLength - cmpp.HEAD_LENGTH)
+		l := int(header.TotalLength - cmpp.HeadLength)
 		discard, err := c.Discard(l)
 		if err != nil || discard != l {
 			return gnet.Close

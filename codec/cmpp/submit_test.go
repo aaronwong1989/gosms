@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gosms/comm"
+	"github.com/aaronwong1989/gosms/comm"
 )
 
 func TestEncode(t *testing.T) {
@@ -111,7 +111,6 @@ func TestNewSubmit(t *testing.T) {
 }
 
 func TestSubmit_Encode(t *testing.T) {
-	Conf.Version = 32
 	phones := []string{"17011112222"}
 	mts := NewSubmit(phones, Poem, MtAtTime(time.Now().Add(5*time.Minute)))
 

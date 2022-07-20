@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"gosms/comm"
+	"github.com/aaronwong1989/gosms/comm"
 )
 
 // Submit
@@ -14,47 +14,27 @@ import (
 // 2.0版 feeTerminalId、destTerminalId 均为21字节，无LinkId字段，有Reserve字段
 
 type Submit struct {
-	*MessageHeader        // 消息头，【12字节】
-	msgId          uint64 // 信息标识，由 SP 接入的短信网关本身产 生，本处填空(0)。【8字节】
-	pkTotal        uint8  // 相同Msg_Id的信息总条数 【1字节】
-	pkNumber       uint8  // 相同Msg_Id的信息序号，从1开始 【1字节】
-	registeredDel  uint8  // 是否要求返回状态确认报告： 0：不需要，1：需要。【1字节】
-	msgLevel       uint8  // 信息级别，1-9 【1字节】
-	serviceId      string // 业务标识，是数字、字母和符号的组合。【10字节】
-	// 计费用户类型字段
-	// 0：对目的终端MSISDN计费；
-	// 1：对源终端MSISDN计费；
-	// 2：对SP计费;
-	// 3：表示本字段无效，对谁计费参见Fee_terminal_Id 字段。
-	feeUsertype uint8 // 【1字节】
-	// 被计费用户的号码（如本字节填空，则表示本字段无效，对谁计费参见Fee_UserType字段，本字段与Fee_UserType字段互斥）
-	feeTerminalId   string //  【32字节】
-	feeTerminalType uint8  // 被计费用户的号码类型，0：真实号码；1：伪码 【1字节】
-	tpPid           uint8  // GSM协议类型。详细是解释请参考GSM03.40中的9.2.3.9 【1字节】
-	tpUdhi          uint8  // GSM协议类型。详细是解释请参考GSM03.40中的9.2.3.9 【1字节】
-	// 信息格式
-	// 0：ASCII串
-	// 3：短信写卡操作
-	// 4：二进制信息
-	// 8：UCS2编码
-	// 15：含GB汉字
-	msgFmt uint8  //  【1字节】
-	msgSrc string // 信息内容来源(SP_Id) 【6字节】
-	// 资费类别
-	// 01：对“计费用户号码”免费
-	// 02：对“计费用户号码”按条计信息费
-	// 03：对“计费用户号码”按包月收取信息费
-	// 04：对“计费用户号码”的信息费封顶
-	// 05：对“计费用户号码”的收费是由SP实现
-	feeType   string //  【2字节】
-	feeCode   string // 资费代码（以分为单位） 【6字节】
-	validTime string // 存活有效期，格式遵循SMPP3.3协议 【17字节】
-	atTime    string // 定时发送时间，格式遵循SMPP3.3协议 【17字节】
-	// 源号码 SP的服务代码或前缀为服务代码的长号码, 网关将该号码完整的填到SMPP协议Submit_SM消息相应的source_addr字段，该号码最终在用户手机上显示为短消息的主叫号码
-	srcId     string //  【21字节】
-	destUsrTl uint8  // 接收信息的用户数量(小于100个用户) 【1字节】
-	// 接收短信的MSISDN号码
-	destTerminalId   string //  【32*DestUsrTl字节】
+	*MessageHeader          // 消息头，【12字节】
+	msgId            uint64 // 信息标识，由 SP 接入的短信网关本身产 生，本处填空(0)。【8字节】
+	pkTotal          uint8  // 相同Msg_Id的信息总条数 【1字节】
+	pkNumber         uint8  // 相同Msg_Id的信息序号，从1开始 【1字节】
+	registeredDel    uint8  // 是否要求返回状态确认报告： 0：不需要，1：需要。【1字节】
+	msgLevel         uint8  // 信息级别，1-9 【1字节】
+	serviceId        string // 业务标识，是数字、字母和符号的组合。【10字节】
+	feeUsertype      uint8  // 计费用户类型字段 【1字节】
+	feeTerminalId    string //  被计费用户的号码（如本字节填空，则表示本字段无效，对谁计费参见Fee_UserType字段，本字段与Fee_UserType字段互斥）【32字节】
+	feeTerminalType  uint8  // 被计费用户的号码类型，0：真实号码；1：伪码 【1字节】
+	tpPid            uint8  // GSM协议类型。详细是解释请参考GSM03.40中的9.2.3.9 【1字节】
+	tpUdhi           uint8  // GSM协议类型。详细是解释请参考GSM03.40中的9.2.3.9 【1字节】
+	msgFmt           uint8  // 信息格式 【1字节】
+	msgSrc           string // 信息内容来源(SP_Id) 【6字节】
+	feeType          string //  资费类别【2字节】
+	feeCode          string // 资费代码（以分为单位） 【6字节】
+	validTime        string // 存活有效期，格式遵循SMPP3.3协议 【17字节】
+	atTime           string // 定时发送时间，格式遵循SMPP3.3协议 【17字节】
+	srcId            string //  源号码 SP的服务代码或前缀为服务代码的长号码, 网关将该号码完整的填到SMPP协议Submit_SM消息相应的source_addr字段，该号码最终在用户手机上显示为短消息的主叫号码【21字节】
+	destUsrTl        uint8  // 接收信息的用户数量(小于100个用户) 【1字节】
+	destTerminalId   string //  接收短信的MSISDN号码【32*DestUsrTl字节】
 	termIds          []byte // DestTerminalId编码后的格式
 	destTerminalType uint8  //  接收短信的用户的号码类型，0：真实号码；1：伪码【1字节】
 	msgLength        uint8  // 信息长度(Msg_Fmt值为0时：<160个字节；其它<=140个字节) 【1字节】
@@ -87,7 +67,7 @@ func NewSubmit(phones []string, content string, opts ...Option) (messages []*Sub
 	}
 	mt.termIds = termIds
 
-	mt.msgSrc = Conf.SourceAddr
+	mt.msgSrc = Conf.GetString("source-addr")
 
 	mt.msgContent = content
 	slices := MsgSlices(mt.msgFmt, content)
@@ -179,7 +159,7 @@ func (sub *Submit) Encode() []byte {
 
 func (sub *Submit) Decode(header *MessageHeader, frame []byte) error {
 	// check
-	if header == nil || header.CommandId != CMPP_SUBMIT || uint32(len(frame)) < (header.TotalLength-HEAD_LENGTH) {
+	if header == nil || header.CommandId != CMPP_SUBMIT || uint32(len(frame)) < (header.TotalLength-HeadLength) {
 		return ErrorPacket
 	}
 	sub.MessageHeader = header
@@ -266,9 +246,9 @@ func (sub *Submit) ToResponse(result uint32) interface{} {
 	header := *sub.MessageHeader
 	resp.MessageHeader = &header
 	resp.CommandId = CMPP_SUBMIT_RESP
-	resp.TotalLength = HEAD_LENGTH + 9
+	resp.TotalLength = HeadLength + 9
 	if V3() {
-		resp.TotalLength = HEAD_LENGTH + 12
+		resp.TotalLength = HeadLength + 12
 	}
 	if result == 0 {
 		resp.msgId = uint64(Seq64.NextVal())
@@ -316,7 +296,7 @@ func (resp *SubmitResp) Encode() []byte {
 }
 func (resp *SubmitResp) Decode(header *MessageHeader, frame []byte) error {
 	// check
-	if header == nil || header.CommandId != CMPP_SUBMIT_RESP || uint32(len(frame)) < (header.TotalLength-HEAD_LENGTH) {
+	if header == nil || header.CommandId != CMPP_SUBMIT_RESP || uint32(len(frame)) < (header.TotalLength-HeadLength) {
 		return ErrorPacket
 	}
 	resp.MessageHeader = header
@@ -371,31 +351,31 @@ func setOptions(sub *Submit, opts *MtOptions) {
 	if opts.FeeUsertype != uint8(0xf) {
 		sub.feeUsertype = opts.FeeUsertype
 	} else {
-		sub.feeUsertype = Conf.FeeUsertype
+		sub.feeUsertype = byte(Conf.GetInt("fee-user-type"))
 	}
 
 	if opts.MsgLevel != uint8(0xf) {
 		sub.msgLevel = opts.MsgLevel
 	} else {
-		sub.msgLevel = Conf.MsgLevel
+		sub.msgLevel = byte(Conf.GetInt("default-msg-level"))
 	}
 
 	if opts.RegisteredDel != uint8(0xf) {
 		sub.registeredDel = opts.RegisteredDel
 	} else {
-		sub.registeredDel = Conf.RegisteredDel
+		sub.registeredDel = byte(Conf.GetInt("need-report"))
 	}
 
 	if opts.FeeTerminalType != uint8(0xf) {
 		sub.feeTerminalType = opts.FeeTerminalType
 	} else {
-		sub.feeTerminalType = Conf.FeeTerminalType
+		sub.feeTerminalType = byte(Conf.GetInt("fee-terminal-type"))
 	}
 
 	if opts.FeeType != "" {
 		sub.feeType = opts.FeeType
 	} else {
-		sub.feeType = Conf.FeeType
+		sub.feeType = Conf.GetString("fee-type")
 	}
 
 	if opts.AtTime != "" {
@@ -405,7 +385,7 @@ func setOptions(sub *Submit, opts *MtOptions) {
 	if opts.ValidTime != "" {
 		sub.validTime = opts.ValidTime
 	} else {
-		t := time.Now().Add(Conf.ValidDuration)
+		t := time.Now().Add(Conf.GetDuration("default-valid-duration"))
 		s := t.Format("060102150405")
 		sub.validTime = s + "032+"
 	}
@@ -413,31 +393,31 @@ func setOptions(sub *Submit, opts *MtOptions) {
 	if opts.FeeCode != "" {
 		sub.feeCode = opts.FeeCode
 	} else {
-		sub.feeCode = Conf.FeeCode
+		sub.feeCode = Conf.GetString("fee-code")
 	}
 
 	if opts.FeeTerminalId != "" {
 		sub.feeTerminalId = opts.FeeTerminalId
 	} else {
-		sub.feeTerminalId = Conf.FeeTerminalId
+		sub.feeTerminalId = Conf.GetString("fee-terminal-id")
 	}
 
 	if opts.SrcId != "" {
 		sub.srcId = opts.SrcId
 	} else {
-		sub.srcId = Conf.SrcId
+		sub.srcId = Conf.GetString("sms-display-no")
 	}
 
 	if opts.ServiceId != "" {
 		sub.serviceId = opts.ServiceId
 	} else {
-		sub.serviceId = Conf.ServiceId
+		sub.serviceId = Conf.GetString("service-id")
 	}
 
 	if opts.LinkID != "" {
 		sub.linkID = opts.LinkID
 	} else {
-		sub.linkID = Conf.LinkID
+		sub.linkID = Conf.GetString("link-id")
 	}
 }
 

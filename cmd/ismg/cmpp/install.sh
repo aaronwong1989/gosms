@@ -10,4 +10,4 @@ mkdir -p ~/cmpp
 mv cmpp.ismg ~/cmpp/
 mv main.test ~/cmpp/
 cp start.sh ~/cmpp/
-cp -f cmpp.yaml ~/.cmpp.yaml
+cp -rf ../../../config ~/cmpp/

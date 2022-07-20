@@ -13,8 +13,8 @@ type MessageHeader struct {
 }
 
 func (header *MessageHeader) Encode() []byte {
-	if header.TotalLength < HEAD_LENGTH {
-		header.TotalLength = HEAD_LENGTH
+	if header.TotalLength < HeadLength {
+		header.TotalLength = HeadLength
 	}
 	frame := make([]byte, header.TotalLength)
 	binary.BigEndian.PutUint32(frame[0:4], header.TotalLength)
@@ -24,7 +24,7 @@ func (header *MessageHeader) Encode() []byte {
 }
 
 func (header *MessageHeader) Decode(frame []byte) error {
-	if len(frame) < HEAD_LENGTH {
+	if len(frame) < HeadLength {
 		return ErrorPacket
 	}
 	header.TotalLength = binary.BigEndian.Uint32(frame[0:4])
@@ -49,11 +49,11 @@ func TrimStr(bts []byte) string {
 }
 
 func V3() bool {
-	return int(Conf.Version)&0xf0 == 0x30
+	return int(Conf.GetInt("version"))&0xf0 == 0x30
 }
 
 const (
-	HEAD_LENGTH           = 12                 // 报文头长度
+	HeadLength            = 12                 // 报文头长度
 	CMPP_CONNECT          = uint32(0x00000001) // 请求连接
 	CMPP_CONNECT_RESP     = uint32(0x80000001) // 请求连接应答
 	CMPP_TERMINATE        = uint32(0x00000002) // 终止连接

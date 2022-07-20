@@ -25,28 +25,28 @@ var bcdSeq = NewBcdSequence("000001")
 func BenchmarkBcdSequence_NextSeq(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcdSeq.NextSeq()
+		bcdSeq.NextVal()
 	}
 }
 
 func BenchmarkBcdSequence_BcdToString(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		BcdToString(bcdSeq.NextSeq())
+		BcdToString(bcdSeq.NextVal())
 	}
 }
 
 func BenchmarkBcdSequence_FmtString(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = fmt.Sprintf("%x", bcdSeq.NextSeq())
+		_ = fmt.Sprintf("%x", bcdSeq.NextVal())
 	}
 }
 
 func BenchmarkBcdSequence_BcdToStringParallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			BcdToString(bcdSeq.NextSeq())
+			BcdToString(bcdSeq.NextVal())
 		}
 	})
 }
@@ -54,7 +54,7 @@ func BenchmarkBcdSequence_BcdToStringParallel(b *testing.B) {
 func BenchmarkBcdSequence_FmtStringParallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = fmt.Sprintf("%x", bcdSeq.NextSeq())
+			_ = fmt.Sprintf("%x", bcdSeq.NextVal())
 		}
 	})
 }

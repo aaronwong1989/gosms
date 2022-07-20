@@ -34,12 +34,12 @@ func NewDelivery(phone string, msg string, dest string, serviceId string) *Deliv
 	if dest != "" {
 		dly.destId = dest
 	} else {
-		dly.destId = Conf.SrcId
+		dly.destId = Conf.GetString("sms-display-no")
 	}
 	if serviceId != "" {
 		dly.serviceId = serviceId
 	} else {
-		dly.serviceId = Conf.ServiceId
+		dly.serviceId = Conf.GetString("service-id")
 	}
 	baseLen := uint32(85)
 	if V3() {
@@ -95,7 +95,7 @@ func (d *Delivery) Encode() []byte {
 }
 
 func (d *Delivery) Decode(header *MessageHeader, frame []byte) error {
-	if header == nil || header.CommandId != CMPP_DELIVER || uint32(len(frame)) < (header.TotalLength-HEAD_LENGTH) {
+	if header == nil || header.CommandId != CMPP_DELIVER || uint32(len(frame)) < (header.TotalLength-HeadLength) {
 		return ErrorPacket
 	}
 	d.MessageHeader = header
@@ -141,9 +141,9 @@ func (d *Delivery) ToResponse(code uint32) interface{} {
 	header := *d.MessageHeader
 	dr := &DeliveryResp{}
 	dr.MessageHeader = &header
-	dr.TotalLength = HEAD_LENGTH + 9
+	dr.TotalLength = HeadLength + 9
 	if V3() {
-		dr.TotalLength = HEAD_LENGTH + 12
+		dr.TotalLength = HeadLength + 12
 	}
 	dr.CommandId = CMPP_DELIVER_RESP
 	dr.msgId = d.msgId
@@ -214,7 +214,7 @@ func (r *DeliveryResp) Encode() []byte {
 }
 
 func (r *DeliveryResp) Decode(header *MessageHeader, frame []byte) error {
-	if header == nil || header.CommandId != CMPP_DELIVER_RESP || uint32(len(frame)) < (header.TotalLength-HEAD_LENGTH) {
+	if header == nil || header.CommandId != CMPP_DELIVER_RESP || uint32(len(frame)) < (header.TotalLength-HeadLength) {
 		return ErrorPacket
 	}
 	r.msgId = binary.BigEndian.Uint64(frame[0:8])

@@ -3,11 +3,9 @@ package cmpp
 import (
 	"encoding/binary"
 	"fmt"
-
-	"gosms/comm/snowflake32"
 )
 
-var sequence = snowflake32.NewSnowflake(Conf.DataCenterId, Conf.WorkerId)
+var ReportSeq Sequence32
 
 type Report struct {
 	msgId          uint64 // 信息标识，SP提交短信(CMPP_SUBMIT)操作时，与SP相连的ISMG产生的 Msg_Id。【8字节】
@@ -20,7 +18,7 @@ type Report struct {
 
 func NewReport(msgId uint64, destTerminalId string, submitTime string, doneTime string) *Report {
 	report := &Report{msgId: msgId, submitTime: submitTime, doneTime: doneTime, destTerminalId: destTerminalId}
-	report.smscSequence = uint32(sequence.NextVal())
+	report.smscSequence = uint32(ReportSeq.NextVal())
 	// 判断序号的时间戳部分
 	switch (report.smscSequence >> 14) % 100 {
 	case 99:

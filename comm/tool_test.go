@@ -3,6 +3,7 @@ package comm
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/encoding/unicode"
 )
@@ -23,4 +24,8 @@ func TestUcs2Encode(t *testing.T) {
 	s, _ = simplifiedchinese.GB18030.NewDecoder().String(s)
 	t.Logf("%s", s)
 	t.Logf("%x", s)
+}
+
+func TestDiceCheck(t *testing.T) {
+	assert.True(t, DiceCheck(0.99))
 }

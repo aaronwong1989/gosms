@@ -9,7 +9,7 @@ type ActiveTest struct {
 }
 
 func NewActiveTest() *ActiveTest {
-	header := &MessageHeader{TotalLength: HEAD_LENGTH, CommandId: CMPP_ACTIVE_TEST, SequenceId: uint32(Seq32.NextVal())}
+	header := &MessageHeader{TotalLength: HeadLength, CommandId: CMPP_ACTIVE_TEST, SequenceId: uint32(Seq32.NextVal())}
 	return &ActiveTest{header}
 }
 
@@ -26,7 +26,7 @@ func (at *ActiveTest) Decode(header *MessageHeader, frame []byte) error {
 }
 
 func (at *ActiveTest) ToResponse(_ uint32) interface{} {
-	header := &MessageHeader{TotalLength: HEAD_LENGTH + 1, CommandId: CMPP_ACTIVE_TEST_RESP, SequenceId: at.SequenceId}
+	header := &MessageHeader{TotalLength: HeadLength + 1, CommandId: CMPP_ACTIVE_TEST_RESP, SequenceId: at.SequenceId}
 	atr := ActiveTestResp{MessageHeader: header, reserved: 0}
 	return &atr
 }
@@ -45,7 +45,7 @@ func (at *ActiveTestResp) Encode() []byte {
 }
 
 func (at *ActiveTestResp) Decode(header *MessageHeader, frame []byte) error {
-	if header == nil || header.CommandId != CMPP_ACTIVE_TEST_RESP || len(frame) < (13-HEAD_LENGTH) {
+	if header == nil || header.CommandId != CMPP_ACTIVE_TEST_RESP || len(frame) < (13-HeadLength) {
 		return ErrorPacket
 	}
 	at.MessageHeader = header

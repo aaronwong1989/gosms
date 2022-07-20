@@ -14,7 +14,7 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 
-	"gosms/comm/logging"
+	"github.com/aaronwong1989/gosms/comm/logging"
 )
 
 var log = logging.GetDefaultLogger()
@@ -140,9 +140,9 @@ func RandNum(min, max int32) int {
 	return rand.Intn(int(max-min)) + int(min)
 }
 
-// DiceCheck 当前时间尾数与给定数相同时返回true
-func DiceCheck(prob int32) bool {
-	return time.Now().Unix()%int64(prob) == 0
+// DiceCheck 得到结果比给定数字小则返回true，否则返回false
+func DiceCheck(prob float64) bool {
+	return float64(rand.Intn(10000))/10000.0 < prob
 }
 
 // SavePid 在程序执行的当前目录生成pid文件

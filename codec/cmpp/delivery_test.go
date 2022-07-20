@@ -7,7 +7,6 @@ import (
 )
 
 func TestNewDelivery(t *testing.T) {
-	Conf.Version = 32
 	cases := []string{
 		"hello world",
 		"你好，世界。 hello world",
@@ -42,8 +41,8 @@ func testcase(t *testing.T, msg string) {
 	}
 
 	assert.Equal(t, d.msgLength, uint8(l))
-	assert.Equal(t, d.destId, Conf.SrcId)
-	assert.Equal(t, d.serviceId, Conf.ServiceId)
+	assert.Equal(t, d.destId, Conf.GetString("sms-display-no"))
+	assert.Equal(t, d.serviceId, Conf.GetString("service-id"))
 }
 
 const Poem2 = "Will drink\n" +

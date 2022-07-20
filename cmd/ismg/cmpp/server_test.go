@@ -14,15 +14,20 @@ import (
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 	"github.com/stretchr/testify/assert"
 
-	"gosms/codec/cmpp"
-	"gosms/comm"
-	"gosms/comm/snowflake"
+	"github.com/aaronwong1989/gosms/codec/cmpp"
+	"github.com/aaronwong1989/gosms/comm"
+	"github.com/aaronwong1989/gosms/comm/snowflake"
+	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 func init() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	cmpp.Seq32 = comm.NewCycleSequence(cmpp.Conf.DataCenterId, cmpp.Conf.WorkerId)
-	cmpp.Seq64 = snowflake.NewSnowflake(int64(cmpp.Conf.DataCenterId), int64(cmpp.Conf.WorkerId))
+	cmpp.Conf = yml_config.CreateYamlFactory("cmpp.yaml")
+	dc := cmpp.Conf.GetInt("data-center-id")
+	wk := cmpp.Conf.GetInt("worker-id")
+	cmpp.Seq32 = comm.NewCycleSequence(int32(dc), int32(wk))
+	cmpp.Seq64 = snowflake.NewSnowflake(int64(dc), int64(wk))
+	cmpp.ReportSeq = comm.NewCycleSequence(int32(dc), int32(wk))
 }
 
 var (
@@ -37,7 +42,7 @@ var (
 	termChan  = make(chan struct{})
 
 	clients  = 1
-	duration = time.Second * 10
+	duration = time.Second * 30
 	// addr = "10.211.55.13:9000"
 	addr = ":9000"
 )
@@ -183,7 +188,7 @@ func login(t *testing.T, c net.Conn) bool {
 		return false
 	}
 	rep := &cmpp.ConnectResp{}
-	err = rep.Decode(header, resp[cmpp.HEAD_LENGTH:])
+	err = rep.Decode(header, resp[cmpp.HeadLength:])
 	if err != nil {
 		return false
 	}

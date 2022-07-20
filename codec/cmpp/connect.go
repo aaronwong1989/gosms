@@ -31,8 +31,8 @@ func NewConnect() *Connect {
 	header.CommandId = CMPP_CONNECT
 	header.SequenceId = uint32(Seq32.NextVal())
 	con.MessageHeader = header
-	con.version = Conf.Version
-	con.sourceAddr = Conf.SourceAddr
+	con.version = byte(Conf.GetInt("version"))
+	con.sourceAddr = Conf.GetString("source-addr")
 	ts, _ := strconv.ParseUint(time.Now().Format("0102150405"), 10, 32)
 	con.timestamp = uint32(ts)
 	// TODO TEST ONLY
@@ -55,7 +55,7 @@ func (connect *Connect) Encode() []byte {
 
 func (connect *Connect) Decode(header *MessageHeader, frame []byte) error {
 	// check
-	if header == nil || header.CommandId != CMPP_CONNECT || len(frame) < (39-HEAD_LENGTH) {
+	if header == nil || header.CommandId != CMPP_CONNECT || len(frame) < (39-HeadLength) {
 		return ErrorPacket
 	}
 	connect.MessageHeader = header
@@ -72,7 +72,7 @@ func (connect *Connect) String() string {
 }
 
 func (connect *Connect) Check() uint32 {
-	if connect.version&0xf0 != Conf.Version&0xf0 {
+	if connect.version&0xf0 != byte(Conf.GetInt("version"))&0xf0 {
 		return 4
 	}
 
@@ -82,7 +82,7 @@ func (connect *Connect) Check() uint32 {
 	log.Debugf("[AuthCheck] compute: %x", authMd5)
 	i := bytes.Compare(authSource, authMd5[:])
 	// 配置不做校验或校验通过时返回0
-	if !Conf.AuthCheck || i == 0 {
+	if !Conf.GetBool("auth-check") || i == 0 {
 		return 0
 	}
 	return 3
@@ -109,10 +109,10 @@ func (connect *Connect) ToResponse(code uint32) interface{} {
 	authDt := make([]byte, 0, 64)
 	authDt = append(authDt, fmt.Sprintf("%d", response.status)...)
 	authDt = append(authDt, connect.authenticatorSource...)
-	authDt = append(authDt, Conf.SharedSecret...)
+	authDt = append(authDt, Conf.GetString("shared-secret")...)
 	auth := md5.Sum(authDt)
 	response.authenticatorISMG = auth[:]
-	response.version = Conf.Version
+	response.version = byte(Conf.GetInt("version"))
 	return response
 }
 
@@ -120,9 +120,9 @@ func reqAuthMd5(connect *Connect) [16]byte {
 	// authenticatorSource = MD5(Source_Addr+9 字节的 0 +shared secret+timestamp)
 	// timestamp 格式为: MMDDHHMMSS，即月日时分秒，10 位。
 	authDt := make([]byte, 0, 64)
-	authDt = append(authDt, Conf.SourceAddr...)
+	authDt = append(authDt, Conf.GetString("source-addr")...)
 	authDt = append(authDt, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-	authDt = append(authDt, Conf.SharedSecret...)
+	authDt = append(authDt, Conf.GetString("shared-secret")...)
 	authDt = append(authDt, fmt.Sprintf("%010d", connect.timestamp)...)
 	log.Debugf("[AuthCheck] auth data: %x", authDt)
 	authMd5 := md5.Sum(authDt)
@@ -154,7 +154,7 @@ func (resp *ConnectResp) Decode(header *MessageHeader, frame []byte) error {
 		bodyLen = 33
 	}
 	// check
-	if header == nil || header.CommandId != CMPP_CONNECT_RESP || len(frame) < (bodyLen-HEAD_LENGTH) {
+	if header == nil || header.CommandId != CMPP_CONNECT_RESP || len(frame) < (bodyLen-HeadLength) {
 		return ErrorPacket
 	}
 	var index int

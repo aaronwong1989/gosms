@@ -18,12 +18,8 @@
 test.result.txt
 .DS_Store
 *.pid
+*.ismg
+*.tar
+*.gz
 
-cmd/cmcc/cmcc
-cmd/cmcc/cmcc.tar
-cmd/cmcc/cmcc.tar.gz
-
-cmd/telecom/telecom
-cmd/telecom/telecom.tar
-cmd/telecom/telecom.tar.gz
 

@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gosms/comm"
-	"gosms/comm/snowflake"
+	"github.com/aaronwong1989/gosms/comm"
+	"github.com/aaronwong1989/gosms/comm/snowflake"
 )
 
 func init() {
@@ -28,7 +28,7 @@ func TestMessageHeader_Encode(t *testing.T) {
 
 	connect.Encode()
 
-	assert.Equal(t, int(Conf.Version)&0xf0, 0x20)
+	assert.Equal(t, int(Conf.GetInt("version"))&0xf0, 0x20)
 
 }
 
