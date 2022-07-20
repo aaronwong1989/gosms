@@ -207,8 +207,8 @@ func (s *Submit) String() string {
 	if s.msgLength > 6 {
 		bts = s.msgBytes[:6]
 	}
-	return fmt.Sprintf("{ header: %v, msgType: %v, needReport: %v, priority: %v, serviceID: %v, "+
-		"feeType: %v, feeCode: %v, fixedFee: %v, msgFormat: %v, validTime: %v, atTime: %v, srcTermID: %v, "+
+	return fmt.Sprintf("{ header: %v, msgType: %v, NeedReport: %v, Priority: %v, ServiceID: %v, "+
+		"feeType: %v, feeCode: %v, fixedFee: %v, msgFormat: %v, validTime: %v, AtTime: %v, SrcTermID: %v, "+
 		"chargeTermID: %v, destTermIDCount: %v, destTermID: %v, msgLength: %v, msgContent: %#x..., "+
 		"reserve: %v, tlvList: %s }",
 		s.MessageHeader, s.msgType, s.needReport, s.priority, s.serviceID,

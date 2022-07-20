@@ -153,7 +153,7 @@ func (dlv *Deliver) String() string {
 		content = strings.ReplaceAll(dlv.msgContent, "\n", " ")
 	}
 	return fmt.Sprintf("{ header: %v, msgId: %x, isReport: %v, msgFormat: %v, recvTime: %v,"+
-		" srcTermID: %v, destTermID: %v, msgLength: %v, "+
+		" SrcTermID: %v, destTermID: %v, msgLength: %v, "+
 		"msgContent: \"%s\", reserve: %v, tlv: %v }",
 		dlv.MessageHeader, dlv.msgId, dlv.isReport, dlv.msgFormat, dlv.recvTime,
 		dlv.srcTermID, dlv.destTermID, dlv.msgLength,

@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewSubmit(t *testing.T) {
-	subs := NewSubmit([]string{"17600001111", "17700001111"}, Poem, MtOptions{atTime: time.Now().Add(time.Minute)})
+	subs := NewSubmit([]string{"17600001111", "17700001111"}, Poem, MtOptions{AtTime: time.Now().Add(time.Minute)})
 	assert.True(t, len(subs) == 4)
 
 	for i, sub := range subs {
@@ -31,7 +31,7 @@ func TestSubmit_Encode(t *testing.T) {
 }
 
 func encode(t *testing.T, phones []string, txt string, l int) {
-	subs := NewSubmit(phones, txt, MtOptions{atTime: time.Now().Add(time.Minute)})
+	subs := NewSubmit(phones, txt, MtOptions{AtTime: time.Now().Add(time.Minute)})
 	assert.True(t, len(subs) == l)
 
 	for _, sub := range subs {
@@ -52,7 +52,7 @@ func TestSubmit_Decode(t *testing.T) {
 }
 
 func decode(t *testing.T, phones []string, txt string, l int) {
-	subs := NewSubmit(phones, txt, MtOptions{atTime: time.Now().Add(time.Minute)})
+	subs := NewSubmit(phones, txt, MtOptions{AtTime: time.Now().Add(time.Minute)})
 	assert.True(t, len(subs) == l)
 
 	for _, sub := range subs {

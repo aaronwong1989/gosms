@@ -33,7 +33,7 @@ var Seq80 Sequence80
 //
 // 	// MT消息相关
 // 	NeedReport    byte          `yaml:"need-report"`
-// 	Priority      byte          `yaml:"priority "`
+// 	Priority      byte          `yaml:"Priority "`
 // 	DisplayNo     string        `yaml:"sms-display-no"`
 // 	ServiceId     string        `yaml:"service-id"`
 // 	FeeType       string        `yaml:"fee-type"`
