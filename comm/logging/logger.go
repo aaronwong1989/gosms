@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/aaronwong1989/yaml_config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -64,6 +65,7 @@ func init() {
 		cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02T15:04:05.000")
 		zapLogger, _ := cfg.Build()
 		defaultLogger = zapLogger.Sugar()
+		yaml_config.SetLogger(zapLogger)
 	}
 }
 
@@ -109,6 +111,7 @@ func CreateLoggerAsLocalFile(localFilePath string, logLevel Level) (logger Logge
 	zapLogger := zap.New(core, zap.AddCaller())
 	logger = zapLogger.Sugar()
 	flush = zapLogger.Sync
+	yaml_config.SetLogger(zapLogger)
 	return
 }
 

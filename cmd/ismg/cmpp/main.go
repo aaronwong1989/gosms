@@ -16,7 +16,6 @@ var log = logging.GetDefaultLogger()
 
 func main() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-
 	cmpp.Conf = yaml_config.CreateYamlFactory("config", "cmpp", "gosms")
 	cmpp.Conf.ConfigFileChangeListen()
 
