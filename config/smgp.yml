@@ -36,11 +36,8 @@ link-id:
 default-valid-duration: 2h
 
 ### 以下是模拟网关运行情况的参数 ###
-# 成功率：
-# 95  表示 95%
-# 99  表示 99%
-# 999 表示 99.9%
-success-rate: 96
+# 成功率，非成功的返回状态码非0
+success-rate: 0.96
 # Mt响应的最大与最小时间，状态报告在fix-report-resp-ms后发送
 min-submit-resp-ms: 1
 max-submit-resp-ms: 3
