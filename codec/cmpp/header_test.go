@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aaronwong1989/yaml_config"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aaronwong1989/gosms/comm"
 	"github.com/aaronwong1989/gosms/comm/snowflake"
-	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 func init() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	Conf = yml_config.CreateYamlFactory("cmpp")
+	Conf = yaml_config.CreateYamlFactory("config", "cmpp", "gosms")
 	Conf.ConfigFileChangeListen()
 
 	dc := Conf.GetInt("data-center-id")

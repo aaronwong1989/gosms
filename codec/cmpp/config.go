@@ -3,14 +3,15 @@ package cmpp
 import (
 	"errors"
 
+	"github.com/aaronwong1989/yaml_config"
+
 	"github.com/aaronwong1989/gosms/codec"
 	"github.com/aaronwong1989/gosms/comm/logging"
-	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 var log = logging.GetDefaultLogger()
 var ErrorPacket = errors.New("error packet")
-var Conf yml_config.YmlConfig
+var Conf yaml_config.YmlConfig
 var Seq32 codec.Sequence32
 var Seq64 codec.Sequence64
 

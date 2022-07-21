@@ -11,17 +11,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aaronwong1989/yaml_config"
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aaronwong1989/gosms/codec/smgp"
 	"github.com/aaronwong1989/gosms/comm"
-	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 func init() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	smgp.Conf = yml_config.CreateYamlFactory("smgp")
+	smgp.Conf = yaml_config.CreateYamlFactory("config", "smgp", "gosms")
 	smgp.Conf.ConfigFileChangeListen()
 
 	dc := smgp.Conf.GetInt("data-center-id")

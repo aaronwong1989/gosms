@@ -11,18 +11,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aaronwong1989/yaml_config"
 	"github.com/panjf2000/gnet/v2/pkg/pool/goroutine"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aaronwong1989/gosms/codec/cmpp"
 	"github.com/aaronwong1989/gosms/comm"
 	"github.com/aaronwong1989/gosms/comm/snowflake"
-	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 func init() {
 	rand.Seed(time.Now().Unix()) // 随机种子
-	cmpp.Conf = yml_config.CreateYamlFactory("cmpp")
+	cmpp.Conf = yaml_config.CreateYamlFactory("config", "cmpp", "gosms")
 	cmpp.Conf.ConfigFileChangeListen()
 
 	dc := cmpp.Conf.GetInt("data-center-id")

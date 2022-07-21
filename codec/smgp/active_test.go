@@ -3,12 +3,13 @@ package smgp
 import (
 	"testing"
 
+	"github.com/aaronwong1989/yaml_config"
+
 	"github.com/aaronwong1989/gosms/comm"
-	"github.com/aaronwong1989/gosms/comm/yml_config"
 )
 
 func init() {
-	Conf = yml_config.CreateYamlFactory("smgp")
+	Conf = yaml_config.CreateYamlFactory("config", "smgp", "gosms")
 	Conf.ConfigFileChangeListen()
 
 	dc := Conf.GetInt("data-center-id")
